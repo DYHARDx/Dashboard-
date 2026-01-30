@@ -92,7 +92,7 @@
 
     <script type="module">
         import { db } from './assets/js/firebase-config.js';
-        import { doc, getDoc, addDoc, collection, serverTimestamp, runTransaction, increment } from "https://www.gstatic.com/firebasejs/10.7.1/firebase-firestore.js";
+        import { doc, getDoc, addDoc, collection, serverTimestamp, runTransaction, increment, setDoc } from "https://www.gstatic.com/firebasejs/10.7.1/firebase-firestore.js";
 
         async function processClick() {
             const statusEl = document.getElementById('status');
@@ -136,31 +136,53 @@
                 }
 
                 // 2. Log Click in Firestore
-                console.log("Logging click...");
+                console.log("Logging click in 'clicks' collection...");
                 let clickId = "offline_" + Date.now();
 
+                // Unique Click Check (Using LocalStorage)
+                const uniqueKey = `clicked_${offerId}`;
+                const hasClicked = localStorage.getItem(uniqueKey);
+
                 try {
+                    // We always record the raw click in the logs
                     const clickRef = await addDoc(collection(db, "clicks"), {
                         offer_id: offerId,
                         offer_title: offer.title || "Unknown",
                         affiliate_id: affiliateId,
                         subid: subId,
                         timestamp: serverTimestamp(),
-                        user_agent: navigator.userAgent
+                        user_agent: navigator.userAgent,
+                        is_unique: !hasClicked
                     });
                     clickId = clickRef.id;
+                    console.log("Recorded Click ID:", clickId);
 
-                    // 2b. Atomic Increment for Dashboard Stats
-                    const globalRef = doc(db, "analytics", "today");
-                    const affRef = doc(db, "affiliate_analytics", affiliateId);
+                    // 2b. Atomic Increment for Dashboard Stats (Only if Unique)
+                    if (!hasClicked) {
+                        console.log("Adding unique click to counters...");
+                        const globalRef = doc(db, "analytics", "today");
+                        const affRef = doc(db, "affiliate_analytics", affiliateId);
 
-                    await runTransaction(db, async (transaction) => {
-                        transaction.set(globalRef, { clicks: increment(1) }, { merge: true });
-                        transaction.set(affRef, { clicks: increment(1) }, { merge: true });
-                    });
+                        await Promise.all([
+                            setDoc(globalRef, {
+                                clicks: increment(1),
+                                lastUpdate: serverTimestamp()
+                            }, { merge: true }),
+                            setDoc(affRef, {
+                                clicks: increment(1),
+                                lastUpdate: serverTimestamp()
+                            }, { merge: true })
+                        ]);
+
+                        // Set the flag for this offer so it won't count again
+                        localStorage.setItem(uniqueKey, Date.now().toString());
+                        console.log("Stats updated successfully (Unique).");
+                    } else {
+                        console.log("Repeat click detected. Increment skipped for dashboard stats.");
+                    }
 
                 } catch (dbErr) {
-                    console.warn("Could not log click or update stats:", dbErr);
+                    console.error("Firestore logging failed:", dbErr);
                 }
 
                 statusEl.innerText = "Redirecting...";
