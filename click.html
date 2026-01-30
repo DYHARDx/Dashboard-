@@ -82,10 +82,11 @@
 <body>
 
     <div class="loader-ring" id="loader"></div>
-    <div class="status-text" id="status">Verifying link...</div>
-    <div class="sub-text" id="subtext">Please wait while we redirect you to the secure offer.</div>
+    <!-- Hidden status for background tracking -->
+    <div id="status" class="hidden"></div>
+    <div id="subtext" class="hidden"></div>
 
-    <!-- Fallback Button -->
+    <!-- Fallback Button (Only shows if something goes wrong) -->
     <div id="fallback" class="hidden mt-6">
         <a href="#" id="manualLink" class="btn">Click here to continue</a>
     </div>
@@ -95,9 +96,6 @@
         import { doc, getDoc, addDoc, collection, serverTimestamp, runTransaction, increment, setDoc } from "https://www.gstatic.com/firebasejs/10.7.1/firebase-firestore.js";
 
         async function processClick() {
-            const statusEl = document.getElementById('status');
-            const subtextEl = document.getElementById('subtext');
-            const loaderEl = document.getElementById('loader');
             const fallbackEl = document.getElementById('fallback');
             const manualLink = document.getElementById('manualLink');
 
@@ -109,10 +107,7 @@
             console.log("Processing click for Offer:", offerId, "Affiliate:", affiliateId);
 
             if (!offerId || !affiliateId) {
-                statusEl.innerText = "Invalid Tracking Link";
-                statusEl.style.color = "#ef4444";
-                subtextEl.innerText = "The link parameters are missing required information.";
-                loaderEl.style.display = "none";
+                console.error("Invalid Tracking Link");
                 return;
             }
 
@@ -122,110 +117,83 @@
                 const offerSnap = await getDoc(offerRef);
 
                 if (!offerSnap.exists()) {
-                    statusEl.innerText = "Offer Inactive";
-                    statusEl.style.color = "#ef4444";
-                    subtextEl.innerText = "This offer is no longer available or has been disabled.";
-                    loaderEl.style.display = "none";
+                    console.error("Offer Inactive");
                     return;
                 }
 
                 const offer = offerSnap.data();
 
                 if (!offer.trackingUrl) {
-                    throw new Error("Tracking URL not configured for this offer.");
+                    return;
                 }
 
                 // 2. Log Click in Firestore
                 console.log("Logging click in 'clicks' collection...");
-                let clickId = "offline_" + Date.now();
+                let clickId = "c_" + Date.now();
 
                 // Unique Click Check (Using LocalStorage)
                 const uniqueKey = `clicked_${offerId}`;
                 const hasClicked = localStorage.getItem(uniqueKey);
 
-                try {
-                    // We always record the raw click in the logs
-                    const clickRef = await addDoc(collection(db, "clicks"), {
-                        offer_id: offerId,
-                        offer_title: offer.title || "Unknown",
-                        affiliate_id: affiliateId,
-                        subid: subId,
-                        timestamp: serverTimestamp(),
-                        user_agent: navigator.userAgent,
-                        is_unique: !hasClicked
-                    });
-                    clickId = clickRef.id;
-                    console.log("Recorded Click ID:", clickId);
+                // Start Redirection immediately in background after starting DB task
+                const redirect = (cid) => {
+                    let finalUrl = offer.trackingUrl.trim();
+                    if (!finalUrl.startsWith('http')) finalUrl = 'https://' + finalUrl;
 
-                    // 2b. Atomic Increment for Dashboard Stats (Only if Unique)
+                    if (finalUrl.includes('{click_id}')) {
+                        finalUrl = finalUrl.replace('{click_id}', cid);
+                    } else {
+                        finalUrl += (finalUrl.includes('?') ? '&' : '?') + `click_id=${cid}`;
+                    }
+                    if (subId) finalUrl += `&subid=${encodeURIComponent(subId)}`;
+
+                    console.log("Final Redirect URL:", finalUrl);
+                    manualLink.href = finalUrl;
+                    window.location.replace(finalUrl);
+                };
+
+                // Fire and forget (mostly) - we redirect as soon as we have a click ID
+                addDoc(collection(db, "clicks"), {
+                    offer_id: offerId,
+                    offer_title: offer.title || "Unknown",
+                    affiliate_id: affiliateId,
+                    subid: subId,
+                    timestamp: serverTimestamp(),
+                    user_agent: navigator.userAgent,
+                    is_unique: !hasClicked
+                }).then(docRef => {
+                    clickId = docRef.id;
+                    console.log("Recorded Click ID:", clickId);
                     if (!hasClicked) {
                         console.log("Adding unique click to counters...");
                         const globalRef = doc(db, "analytics", "today");
                         const affRef = doc(db, "affiliate_analytics", affiliateId);
-
-                        await Promise.all([
-                            setDoc(globalRef, {
-                                clicks: increment(1),
-                                lastUpdate: serverTimestamp()
-                            }, { merge: true }),
-                            setDoc(affRef, {
-                                clicks: increment(1),
-                                lastUpdate: serverTimestamp()
-                            }, { merge: true })
-                        ]);
-
-                        // Set the flag for this offer so it won't count again
+                        setDoc(globalRef, { clicks: increment(1), lastUpdate: serverTimestamp() }, { merge: true });
+                        setDoc(affRef, { clicks: increment(1), lastUpdate: serverTimestamp() }, { merge: true });
                         localStorage.setItem(uniqueKey, Date.now().toString());
                         console.log("Stats updated successfully (Unique).");
                     } else {
                         console.log("Repeat click detected. Increment skipped for dashboard stats.");
                     }
+                    redirect(clickId);
+                }).catch(err => {
+                    console.error("Firestore logging failed:", err);
+                    redirect(clickId); // Still redirect on error
+                });
 
-                } catch (dbErr) {
-                    console.error("Firestore logging failed:", dbErr);
-                }
-
-                statusEl.innerText = "Redirecting...";
-                loaderEl.style.borderTopColor = "#10b981";
-
-                // 3. Prepare Final URL
-                let finalUrl = offer.trackingUrl.trim();
-
-                // Fix missing protocol
-                if (!finalUrl.startsWith('http://') && !finalUrl.startsWith('https://')) {
-                    finalUrl = 'https://' + finalUrl;
-                }
-
-                // Replace macros
-                if (finalUrl.includes('{click_id}')) {
-                    finalUrl = finalUrl.replace('{click_id}', clickId);
-                } else {
-                    const separator = finalUrl.includes('?') ? '&' : '?';
-                    finalUrl += `${separator}click_id=${clickId}`;
-                }
-
-                if (subId) finalUrl += `&subid=${encodeURIComponent(subId)}`;
-
-                console.log("Final Redirect URL:", finalUrl);
-
-                // 4. Redirect
-                manualLink.href = finalUrl;
+                // Safety timeout: Redirect anyway after 1.5s if Firestore is slow
                 setTimeout(() => {
-                    window.location.href = finalUrl;
-
-                    // After 3 seconds, if still here, show fallback
-                    setTimeout(() => {
+                    // Only show fallback if the primary redirect hasn't happened yet
+                    if (document.visibilityState === 'visible') {
                         fallbackEl.classList.remove('hidden');
-                        statusEl.innerText = "Almost there...";
-                    }, 3000);
-                }, 500);
+                    }
+                    redirect(clickId);
+                }, 1500);
 
             } catch (error) {
                 console.error("Tracking Error:", error);
-                statusEl.innerText = "Redirection Failed";
-                statusEl.style.color = "#ef4444";
-                subtextEl.innerText = "Error: " + error.message;
-                loaderEl.style.display = "none";
+                // If an error occurs before redirection, show fallback
+                fallbackEl.classList.remove('hidden');
             }
         }
 
