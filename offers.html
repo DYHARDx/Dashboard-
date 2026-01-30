@@ -1,0 +1,115 @@
+<!DOCTYPE html>
+<html lang="en">
+
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Offers - Pyronex Admin</title>
+    <link rel="stylesheet" href="assets/css/styles.css">
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700&display=swap" rel="stylesheet">
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+</head>
+
+<body>
+
+    <div class="layout">
+        <aside class="sidebar" id="sidebarContainer"></aside>
+
+        <main class="main-content">
+            <header class="flex justify-between items-center mb-6">
+                <div>
+                    <h1 class="font-bold" style="font-size: 1.5rem;">All Offers</h1>
+                    <p class="text-muted text-sm">Manage your tracking campaigns</p>
+                </div>
+
+                <a href="create_offer.html" class="btn">
+                    <i class="fa-solid fa-plus" style="margin-right: 8px;"></i> Create Offer
+                </a>
+            </header>
+
+            <div class="card">
+                <div class="table-container">
+                    <table id="offersTable">
+                        <thead>
+                            <tr>
+                                <th>ID</th>
+                                <th>Offer Name</th>
+                                <th>Payout</th>
+                                <th>Geo</th>
+                                <th>Status</th>
+                                <th>Actions</th>
+                            </tr>
+                        </thead>
+                        <tbody>
+                            <!-- Loading State -->
+                            <tr>
+                                <td colspan="6" class="text-center p-6">
+                                    <span class="loader" style="width: 30px; height: 30px;"></span>
+                                    <p class="text-muted mt-2">Loading offers...</p>
+                                </td>
+                            </tr>
+                        </tbody>
+                    </table>
+                </div>
+            </div>
+        </main>
+    </div>
+
+    <script type="module">
+        import { loadSidebar } from './assets/js/layout.js';
+        import { getOffers } from './assets/js/firebase-config.js';
+
+        loadSidebar();
+
+        async function loadOffers() {
+            const tbody = document.querySelector('#offersTable tbody');
+
+            try {
+                const offers = await getOffers();
+
+                if (offers.length === 0) {
+                    tbody.innerHTML = `
+                    <tr>
+                        <td colspan="6" class="text-center p-6 text-muted">
+                            No offers found. Create your first one!
+                        </td>
+                    </tr>
+                `;
+                    return;
+                }
+
+                tbody.innerHTML = offers.map(offer => `
+                <tr>
+                    <td><span class="text-muted text-xs">#${offer.id.substr(0, 6)}</span></td>
+                    <td>
+                        <div class="font-bold">${offer.title}</div>
+                        <div class="text-muted text-xs">${offer.revenueType}</div>
+                    </td>
+                    <td class="text-success font-bold">$${offer.payout.toFixed(2)}</td>
+                    <td><span class="badge badge-warning">${offer.geo}</span></td>
+                    <td><span class="badge badge-success">${offer.status}</span></td>
+                    <td>
+                        <button class="btn btn-outline" style="padding: 5px 10px;"><i class="fa-solid fa-pen"></i></button>
+                        <button class="btn btn-outline" style="padding: 5px 10px; color: var(--danger); border-color: var(--danger);"><i class="fa-solid fa-trash"></i></button>
+                    </td>
+                </tr>
+            `).join('');
+
+            } catch (error) {
+                console.error(error);
+                tbody.innerHTML = `
+                <tr>
+                    <td colspan="6" class="text-center p-6 text-danger">
+                        Failed to load data. Make sure Firebase Config is set.
+                    </td>
+                </tr>
+            `;
+            }
+        }
+
+        loadOffers();
+    </script>
+
+</body>
+
+</html>

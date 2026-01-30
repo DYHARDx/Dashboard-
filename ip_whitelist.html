@@ -1,0 +1,131 @@
+<!DOCTYPE html>
+<html lang="en">
+
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>IP Whitelist - DyHard Panel</title>
+    <link rel="stylesheet" href="assets/css/styles.css">
+    <link href="https://fonts.googleapis.com/css2?family=Plus+Jakarta+Sans:wght@300;400;500;600;700&display=swap"
+        rel="stylesheet">
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+</head>
+
+<body>
+    <div class="layout">
+        <aside class="sidebar" id="sidebarContainer"></aside>
+        <main class="main-content">
+            <header class="flex justify-between items-center mb-6">
+                <div>
+                    <h1 class="font-bold" style="font-size: 1.5rem;">IP Whitelist</h1>
+                    <p class="text-muted text-sm">Allow specific IPs to access the postback API</p>
+                </div>
+                <button class="btn" id="addIpBtn"><i class="fa-solid fa-plus"></i> Add IP</button>
+            </header>
+            <div class="card">
+                <div class="table-container">
+                    <table id="ipTable">
+                        <thead>
+                            <tr>
+                                <th>IP Address</th>
+                                <th>Description</th>
+                                <th>Added By</th>
+                                <th>Date</th>
+                                <th>Action</th>
+                            </tr>
+                        </thead>
+                        <tbody>
+                            <tr>
+                                <td colspan="5" class="text-center p-6"><span class="loader"></span></td>
+                            </tr>
+                        </tbody>
+                    </table>
+                </div>
+            </div>
+        </main>
+    </div>
+
+    <!-- Modal -->
+    <div class="modal-overlay" id="ipModal">
+        <div class="modal-content">
+            <div class="flex justify-between items-center mb-4">
+                <h3 class="font-bold">Whitelist New IP</h3>
+                <button class="btn-outline text-muted" style="border:none;" id="closeModal"><i
+                        class="fa-solid fa-xmark"></i></button>
+            </div>
+            <form id="ipForm">
+                <div class="input-group mb-4">
+                    <label class="input-label">IP Address</label>
+                    <input type="text" class="form-control" name="ip" required placeholder="192.168.1.100">
+                </div>
+                <div class="input-group mb-4">
+                    <label class="input-label">Description</label>
+                    <input type="text" class="form-control" name="desc" required placeholder="Office VPN">
+                </div>
+                <button type="submit" class="btn w-full">Whitelist IP</button>
+            </form>
+        </div>
+    </div>
+
+    <script type="module">
+        import { loadSidebar } from './assets/js/layout.js';
+        import { getIPs, addIP, deleteIP } from './assets/js/firebase-config.js';
+
+        loadSidebar();
+
+        const modal = document.getElementById('ipModal');
+        document.getElementById('addIpBtn').onclick = () => modal.classList.add('active');
+        document.getElementById('closeModal').onclick = () => modal.classList.remove('active');
+
+        async function loadData() {
+            const tbody = document.querySelector('#ipTable tbody');
+            try {
+                const data = await getIPs();
+                if (data.length === 0) {
+                    tbody.innerHTML = `<tr><td colspan="5" class="text-center p-6 text-muted">No IP addresses whitelisted.</td></tr>`;
+                    return;
+                }
+                tbody.innerHTML = data.map(item => `
+                    <tr>
+                        <td><code>${item.ip}</code></td>
+                        <td>${item.description}</td>
+                        <td><div class="flex items-center gap-2"><div style="width:20px;height:20px;background:#6366f1;border-radius:50%;display:flex;align-items:center;justify-content:center;font-size:10px;font-weight:bold;">A</div> Admin</div></td>
+                        <td>${item.addedAt ? new Date(item.addedAt.seconds * 1000).toLocaleDateString() : 'Just now'}</td>
+                        <td>
+                            <button class="btn-outline text-danger text-xs" style="border-color:var(--danger);" onclick="window.removeIP('${item.id}')">
+                                <i class="fa-solid fa-trash"></i>
+                            </button>
+                        </td>
+                    </tr>
+                `).join('');
+            } catch (e) { console.error(e); }
+        }
+        loadData();
+
+        document.getElementById('ipForm').onsubmit = async (e) => {
+            e.preventDefault();
+            const btn = e.target.querySelector('button');
+            const oldText = btn.innerText;
+            btn.innerHTML = 'Saving...';
+            try {
+                await addIP(e.target.ip.value, e.target.desc.value);
+                modal.classList.remove('active');
+                e.target.reset();
+                loadData();
+                alert('IP Whitelisted');
+            } catch (err) { alert(err.message); }
+            finally { btn.innerText = oldText; }
+        };
+
+        window.removeIP = async (id) => {
+            if (confirm('Are you sure you want to remove this IP?')) {
+                try {
+                    await deleteIP(id);
+                    loadData();
+                } catch (e) { alert(e.message); }
+            }
+        };
+    </script>
+</body>
+
+</html>

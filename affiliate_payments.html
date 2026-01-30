@@ -1,0 +1,132 @@
+<!DOCTYPE html>
+<html lang="en">
+
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Payments - Affiliate Panel</title>
+    <link rel="stylesheet" href="assets/css/styles.css">
+    <link href="https://fonts.googleapis.com/css2?family=Plus+Jakarta+Sans:wght@300;400;500;600;700&display=swap"
+        rel="stylesheet">
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+</head>
+
+<body>
+
+    <div class="layout">
+        <aside class="sidebar" id="sidebarContainer"></aside>
+
+        <main class="main-content">
+            <header class="flex justify-between items-center mb-6">
+                <div>
+                    <h1 class="font-bold" style="font-size: 1.5rem;">Payments & Payouts</h1>
+                    <p class="text-muted text-sm">Manage your earnings and withdrawal history</p>
+                </div>
+            </header>
+
+            <div class="stats-grid">
+                <div class="card">
+                    <div class="flex justify-between items-center mb-4">
+                        <span class="text-muted text-sm">Available Balance</span>
+                        <i class="fa-solid fa-wallet text-primary"></i>
+                    </div>
+                    <h2 class="font-bold" id="payBalance" style="font-size: 1.8rem;">$0.00</h2>
+                    <p class="text-success text-xs mt-1">Ready for withdrawal</p>
+                    <button class="btn w-full mt-4"
+                        onclick="alert('Withdrawal request sent! Minimum $50 required.')">Request Payout</button>
+                </div>
+
+                <div class="card">
+                    <div class="flex justify-between items-center mb-4">
+                        <span class="text-muted text-sm">Total Paid</span>
+                        <i class="fa-solid fa-money-bill-transfer text-success"></i>
+                    </div>
+                    <h2 class="font-bold" id="totalPaid" style="font-size: 1.8rem;">$0.00</h2>
+                    <p class="text-muted text-xs mt-1">Lifetime earnings paid out</p>
+                </div>
+
+                <div class="card">
+                    <div class="flex justify-between items-center mb-4">
+                        <span class="text-muted text-sm">Pending Payout</span>
+                        <i class="fa-solid fa-clock text-warning"></i>
+                    </div>
+                    <h2 class="font-bold" id="pendingPayout" style="font-size: 1.8rem;">$0.00</h2>
+                    <p class="text-warning text-xs mt-1">Under review by admin</p>
+                </div>
+            </div>
+
+            <div class="card">
+                <h3 class="font-bold mb-4">Payment History</h3>
+                <div class="table-container">
+                    <table id="paymentsTable">
+                        <thead>
+                            <tr>
+                                <th>Invoice ID</th>
+                                <th>Date</th>
+                                <th>Amount</th>
+                                <th>Method</th>
+                                <th>Status</th>
+                            </tr>
+                        </thead>
+                        <tbody>
+                            <tr>
+                                <td colspan="5" class="text-center p-6"><span class="loader"></span></td>
+                            </tr>
+                        </tbody>
+                    </table>
+                </div>
+            </div>
+        </main>
+    </div>
+
+    <script type="module">
+        import { loadSidebar } from './assets/js/layout.js';
+        import { checkAuth, getAffiliateInvoices } from './assets/js/firebase-config.js';
+
+        loadSidebar();
+
+        checkAuth(async (user, profile) => {
+            if (user && profile) {
+                document.getElementById('payBalance').innerText = `$${(profile.balance || 0).toFixed(2)}`;
+                loadPayments(user.uid);
+            }
+        });
+
+        async function loadPayments(affiliateId) {
+            const tbody = document.querySelector('#paymentsTable tbody');
+            try {
+                const invoices = await getAffiliateInvoices(affiliateId);
+
+                let totalPaid = 0;
+                let pending = 0;
+
+                if (invoices.length === 0) {
+                    tbody.innerHTML = `<tr><td colspan="5" class="text-center p-6 text-muted">No payment history found.</td></tr>`;
+                } else {
+                    tbody.innerHTML = invoices.map(i => {
+                        if (i.status === 'Paid') totalPaid += (i.amount || 0);
+                        if (i.status === 'Pending') pending += (i.amount || 0);
+
+                        return `
+                            <tr>
+                                <td><code style="background:rgba(255,255,255,0.05); padding:2px 6px; border-radius:4px;">#INV-${i.id.substr(0, 6)}</code></td>
+                                <td>${i.date ? new Date(i.date.seconds * 1000).toLocaleDateString() : 'N/A'}</td>
+                                <td class="font-bold">$${(i.amount || 0).toFixed(2)}</td>
+                                <td>${i.method || 'PayPal'}</td>
+                                <td><span class="badge ${i.status === 'Paid' ? 'badge-success' : 'badge-warning'}">${i.status || 'Pending'}</span></td>
+                            </tr>
+                        `;
+                    }).join('');
+                }
+
+                document.getElementById('totalPaid').innerText = `$${totalPaid.toFixed(2)}`;
+                document.getElementById('pendingPayout').innerText = `$${pending.toFixed(2)}`;
+
+            } catch (e) {
+                tbody.innerHTML = `<tr><td colspan="5" class="text-center p-6 text-danger">Error loading payments.</td></tr>`;
+            }
+        }
+    </script>
+</body>
+
+</html>

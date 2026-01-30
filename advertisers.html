@@ -1,0 +1,180 @@
+<!DOCTYPE html>
+<html lang="en">
+
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Advertisers - DyHard Panel</title>
+    <link rel="stylesheet" href="assets/css/styles.css">
+    <link href="https://fonts.googleapis.com/css2?family=Plus+Jakarta+Sans:wght@300;400;500;600;700&display=swap"
+        rel="stylesheet">
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+</head>
+
+<body>
+
+    <div class="layout">
+        <aside class="sidebar" id="sidebarContainer"></aside>
+
+        <main class="main-content">
+            <header class="flex justify-between items-center mb-6">
+                <div>
+                    <h1 class="font-bold" style="font-size: 1.5rem;">Advertisers</h1>
+                    <p class="text-muted text-sm">Manage direct advertisers and API integrations</p>
+                </div>
+                <button class="btn" id="addAdvBtn"><i class="fa-solid fa-plus"></i> New Advertiser</button>
+            </header>
+
+            <div class="card">
+                <div class="table-container">
+                    <table id="advTable">
+                        <thead>
+                            <tr>
+                                <th>Company</th>
+                                <th>Contact Person</th>
+                                <th>Active Offers</th>
+                                <th>Total Payout</th>
+                                <th>Integration</th>
+                                <th>Actions</th>
+                            </tr>
+                        </thead>
+                        <tbody>
+                            <tr>
+                                <td colspan="6" class="text-center p-6"><span class="loader"></span></td>
+                            </tr>
+                        </tbody>
+                    </table>
+                </div>
+            </div>
+        </main>
+    </div>
+
+    <!-- Modal -->
+    <div class="modal-overlay" id="advModal">
+        <div class="modal-content">
+            <div class="flex justify-between items-center mb-4">
+                <h3 class="font-bold" id="modalTitle">New Advertiser</h3>
+                <button class="btn-outline text-muted" style="border:none;" id="closeModal"><i
+                        class="fa-solid fa-xmark"></i></button>
+            </div>
+            <form id="advForm">
+                <input type="hidden" id="editId">
+                <div class="input-group mb-4">
+                    <label class="input-label">Company Name</label>
+                    <input type="text" class="form-control" name="name" id="nameInput" required
+                        placeholder="AdNetwork Global">
+                </div>
+                <div class="input-group mb-4">
+                    <label class="input-label">Contact Person</label>
+                    <input type="text" class="form-control" name="contact" id="contactInput" required
+                        placeholder="Jane Smith">
+                </div>
+                <div class="input-group mb-4">
+                    <label class="input-label">Postback URL (Optional)</label>
+                    <input type="text" class="form-control" name="postback" id="postbackInput" placeholder="http://...">
+                </div>
+                <button type="submit" class="btn w-full" id="submitBtn">Create Advertiser</button>
+            </form>
+        </div>
+    </div>
+
+
+    <script type="module">
+        import { loadSidebar } from './assets/js/layout.js';
+        import { getAdvertisers, createAdvertiser, updateAdvertiser } from './assets/js/firebase-config.js';
+
+        loadSidebar();
+
+        // Modal Logic
+        const modal = document.getElementById('advModal');
+        const form = document.getElementById('advForm');
+        const modalTitle = document.getElementById('modalTitle');
+        const submitBtn = document.getElementById('submitBtn');
+
+        document.getElementById('addAdvBtn').onclick = () => {
+            form.reset();
+            document.getElementById('editId').value = '';
+            modalTitle.innerText = "New Advertiser";
+            submitBtn.innerText = "Create Advertiser";
+            modal.classList.add('active');
+        };
+        document.getElementById('closeModal').onclick = () => modal.classList.remove('active');
+
+        // Edit Function
+        window.openEditModal = (id, name, contact, postback) => {
+            document.getElementById('editId').value = id;
+            document.getElementById('nameInput').value = name;
+            document.getElementById('contactInput').value = contact;
+            document.getElementById('postbackInput').value = postback || '';
+
+            modalTitle.innerText = "Edit Advertiser";
+            submitBtn.innerText = "Update Advertiser";
+            modal.classList.add('active');
+        };
+
+        // Load Data
+        async function loadData() {
+            const tbody = document.querySelector('#advTable tbody');
+            try {
+                const data = await getAdvertisers();
+                if (data.length === 0) {
+                    tbody.innerHTML = `<tr><td colspan="6" class="text-center p-6 text-muted">No advertisers found.</td></tr>`;
+                    return;
+                }
+                tbody.innerHTML = data.map(item => `
+                <tr>
+                    <td class="font-bold">${item.name}</td>
+                    <td>${item.contact || '-'}</td>
+                    <td>${item.active_offers || 0}</td>
+                    <td>$${(item.total_payout || 0).toFixed(2)}</td>
+                    <td><span class="badge badge-warning">S2S Postback</span></td>
+                    <td>
+                        <button class="btn btn-outline text-xs" 
+                            onclick="window.openEditModal('${item.id}', '${item.name}', '${item.contact || ''}', '${item.postback || ''}')">
+                            Manage
+                        </button>
+                    </td>
+                </tr>
+            `).join('');
+            } catch (e) {
+                console.error(e);
+                tbody.innerHTML = `<tr><td colspan="6" class="text-center text-danger">Error loading data</td></tr>`;
+            }
+        }
+        loadData();
+
+        // Submit Logic
+        form.onsubmit = async (e) => {
+            e.preventDefault();
+            const btn = submitBtn;
+            const oldText = btn.innerText;
+            btn.innerHTML = '<span class="loader" style="width:16px;height:16px;"></span> Saving...';
+
+            const id = document.getElementById('editId').value;
+            const data = {
+                name: document.getElementById('nameInput').value,
+                contact: document.getElementById('contactInput').value,
+                postback: document.getElementById('postbackInput').value
+            };
+
+            try {
+                if (id) {
+                    await updateAdvertiser(id, data);
+                    alert('Advertiser Updated!');
+                } else {
+                    await createAdvertiser(data);
+                    alert('Advertiser Added!');
+                }
+                modal.classList.remove('active');
+                e.target.reset();
+                loadData();
+            } catch (err) {
+                alert('Error: ' + err.message);
+            } finally {
+                btn.innerHTML = oldText;
+            }
+        };
+    </script>
+</body>
+
+</html>

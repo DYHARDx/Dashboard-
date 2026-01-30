@@ -1,0 +1,240 @@
+<!DOCTYPE html>
+<html lang="en">
+
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Affiliates - DyHard Panel</title>
+    <link rel="stylesheet" href="assets/css/styles.css">
+    <link href="https://fonts.googleapis.com/css2?family=Plus+Jakarta+Sans:wght@300;400;500;600;700&display=swap"
+        rel="stylesheet">
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+</head>
+
+<body>
+
+    <div class="layout">
+        <aside class="sidebar" id="sidebarContainer"></aside>
+
+        <main class="main-content">
+            <header class="flex justify-between items-center mb-6">
+                <div>
+                    <h1 class="font-bold" style="font-size: 1.5rem;">Affiliates Management</h1>
+                    <p class="text-muted text-sm">Manage publishers and approval requests</p>
+                </div>
+                <button class="btn btn-outline" id="addAffBtn"><i class="fa-solid fa-user-plus"></i> Add
+                    Affiliate</button>
+            </header>
+
+            <div class="card">
+                <div class="table-container">
+                    <table id="affTable">
+                        <thead>
+                            <tr>
+                                <th>ID</th>
+                                <th>Name / Email</th>
+                                <th>Joined</th>
+                                <th>Balance</th>
+                                <th>Status</th>
+                                <th>Actions</th>
+                            </tr>
+                        </thead>
+                        <tbody>
+                            <tr>
+                                <td colspan="6" class="text-center p-6"><span class="loader"></span></td>
+                            </tr>
+                        </tbody>
+                    </table>
+                </div>
+            </div>
+        </main>
+    </div>
+
+    <!-- Modal -->
+    <div class="modal-overlay" id="affModal">
+        <div class="modal-content">
+            <div class="flex justify-between items-center mb-4">
+                <h3 class="font-bold" id="modalTitle">Add New Affiliate</h3>
+                <button class="btn-outline text-muted" style="border:none;" id="closeModal"><i
+                        class="fa-solid fa-xmark"></i></button>
+            </div>
+            <form id="affForm">
+                <input type="hidden" id="editId">
+                <div class="input-group mb-4">
+                    <label class="input-label">Full Name</label>
+                    <input type="text" class="form-control" name="name" id="nameInput" required placeholder="John Doe">
+                </div>
+                <div class="input-group mb-4">
+                    <label class="input-label">Email Address</label>
+                    <input type="email" class="form-control" name="email" id="emailInput" required
+                        placeholder="john@example.com">
+                </div>
+                <div class="input-group mb-4" id="passGroup">
+                    <label class="input-label">Initial Password</label>
+                    <input type="password" class="form-control" name="password" id="passwordInput"
+                        placeholder="••••••••">
+                    <p class="text-xs text-muted mt-1">Required only for new users.</p>
+                </div>
+                <div class="input-group mb-4">
+                    <label class="input-label">Status</label>
+                    <select class="form-control" name="status" id="statusInput">
+                        <option value="Active">Active</option>
+                        <option value="Pending">Pending</option>
+                        <option value="Banned">Banned</option>
+                    </select>
+                </div>
+                <button type="submit" class="btn w-full" id="submitBtn">Create Account</button>
+            </form>
+        </div>
+    </div>
+
+    <script type="module">
+        import { loadSidebar } from './assets/js/layout.js';
+        import { getAffiliates, createAffiliate, updateAffiliate, deleteAffiliate, registerUserByAdmin } from './assets/js/firebase-config.js';
+
+        loadSidebar();
+
+        // Modal Logic
+        const modal = document.getElementById('affModal');
+        const form = document.getElementById('affForm');
+        const modalTitle = document.getElementById('modalTitle');
+        const submitBtn = document.getElementById('submitBtn');
+        const passGroup = document.getElementById('passGroup');
+
+        // Add Role Selector to Form (if not exists)
+        if (!document.getElementById('roleInput')) {
+            const statusGroup = document.querySelector('.input-group:has(#statusInput)');
+            const roleGroup = document.createElement('div');
+            roleGroup.className = 'input-group mb-4';
+            roleGroup.innerHTML = `
+                <label class="input-label">User Role</label>
+                <select class="form-control" name="role" id="roleInput">
+                    <option value="affiliate">Affiliate</option>
+                    <option value="admin">Admin</option>
+                </select>
+            `;
+            statusGroup.parentNode.insertBefore(roleGroup, statusGroup);
+        }
+
+        // Open for Add
+        document.getElementById('addAffBtn').onclick = () => {
+            form.reset();
+            document.getElementById('editId').value = '';
+            modalTitle.innerText = "Add New User";
+            submitBtn.innerText = "Create User";
+            passGroup.style.display = 'block';
+            document.getElementById('passwordInput').required = true;
+            modal.classList.add('active');
+        };
+
+        document.getElementById('closeModal').onclick = () => modal.classList.remove('active');
+
+        // Global Edit Function
+        window.openEditModal = (id, name, email, status, role) => {
+            document.getElementById('editId').value = id;
+            document.getElementById('nameInput').value = name;
+            document.getElementById('emailInput').value = email;
+            document.getElementById('statusInput').value = status;
+            document.getElementById('roleInput').value = role || 'affiliate';
+
+            modalTitle.innerText = "Edit User";
+            submitBtn.innerText = "Update User";
+            passGroup.style.display = 'none';
+            document.getElementById('passwordInput').required = false;
+            modal.classList.add('active');
+        };
+
+        // Delete Function
+        window.deleteUser = async (id) => {
+            if (confirm('Are you sure you want to delete this user? This cannot be undone.')) {
+                try {
+                    await deleteAffiliate(id);
+                    loadData();
+                } catch (e) {
+                    alert('Error deleting user: ' + e.message);
+                }
+            }
+        };
+
+        // Load Data
+        async function loadData() {
+            const tbody = document.querySelector('#affTable tbody');
+            try {
+                const data = await getAffiliates();
+                if (data.length === 0) {
+                    tbody.innerHTML = `<tr><td colspan="6" class="text-center p-6 text-muted">No users found. Add one!</td></tr>`;
+                    return;
+                }
+                tbody.innerHTML = data.map(item => `
+                <tr>
+                    <td>#${item.id.substr(0, 5)}</td>
+                    <td>
+                        <div class="font-bold">${item.name || 'Unknown'}</div>
+                        <div class="text-muted text-xs">${item.email || 'No Email'}</div>
+                        <div class="text-xs text-primary">${item.role ? item.role.toUpperCase() : 'AFFILIATE'}</div>
+                    </td>
+                    <td>${item.joinedAt ? new Date(item.joinedAt.seconds * 1000).toLocaleDateString() : 'Just now'}</td>
+                    <td class="text-success">$${(item.balance || 0).toFixed(2)}</td>
+                    <td><span class="badge ${item.status === 'Active' ? 'badge-success' : 'badge-danger'}">${item.status || 'Active'}</span></td>
+                    <td>
+                        <div class="flex gap-2">
+                             <button class="btn btn-outline text-xs" 
+                                onclick="window.openEditModal('${item.id}', '${item.name || ''}', '${item.email || ''}', '${item.status || 'Active'}', '${item.role || 'affiliate'}')">
+                                Edit
+                            </button>
+                            <button class="btn btn-outline text-xs text-danger" onclick="window.deleteUser('${item.id}')">
+                                <i class="fa-solid fa-trash"></i>
+                            </button>
+                        </div>
+                    </td>
+                </tr>
+            `).join('');
+            } catch (e) {
+                console.error(e);
+                tbody.innerHTML = `<tr><td colspan="6" class="text-center text-danger">Error loading data</td></tr>`;
+            }
+        }
+        loadData();
+
+        // Submit Logic (Create or Update)
+        form.onsubmit = async (e) => {
+            e.preventDefault();
+            const btn = submitBtn;
+            const oldText = btn.innerText;
+            btn.innerHTML = '<span class="loader" style="width:16px;height:16px;"></span> Processing...';
+
+            const id = document.getElementById('editId').value;
+            const email = document.getElementById('emailInput').value;
+            const data = {
+                name: document.getElementById('nameInput').value,
+                email: email,
+                status: document.getElementById('statusInput').value,
+                role: document.getElementById('roleInput').value
+            };
+
+            try {
+                if (id) {
+                    await updateAffiliate(id, data);
+                    alert('User Profile Updated!');
+                } else {
+                    const password = document.getElementById('passwordInput').value;
+                    if (!password || password.length < 6) {
+                        throw new Error('Password must be at least 6 characters');
+                    }
+                    // Use advanced admin reg (no logout)
+                    await registerUserByAdmin(email, password, data.name, data.role);
+                    alert('Success! Full account & profile created.');
+                }
+                modal.classList.remove('active');
+                form.reset();
+                loadData();
+            } catch (err) {
+                alert('Error: ' + err.message);
+            } finally {
+                btn.innerHTML = oldText;
+            }
+        };
+    </script>
+</body>
+
+</html>

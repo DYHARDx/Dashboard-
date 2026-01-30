@@ -1,0 +1,145 @@
+<!DOCTYPE html>
+<html lang="en">
+
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Profile Settings - Affiliate Panel</title>
+    <link rel="stylesheet" href="assets/css/styles.css">
+    <link href="https://fonts.googleapis.com/css2?family=Plus+Jakarta+Sans:wght@300;400;500;600;700&display=swap"
+        rel="stylesheet">
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+</head>
+
+<body>
+
+    <div class="layout">
+        <aside class="sidebar" id="sidebarContainer"></aside>
+
+        <main class="main-content">
+            <header class="flex justify-between items-center mb-6">
+                <div>
+                    <h1 class="font-bold" style="font-size: 1.5rem;">Profile Settings</h1>
+                    <p class="text-muted text-sm">Update your account information and preferences</p>
+                </div>
+            </header>
+
+            <div style="display: grid; grid-template-columns: 1fr 2fr; gap: 2rem;">
+                <!-- Avatar & Identity -->
+                <div class="card" style="text-align: center;">
+                    <div style="position: relative; display: inline-block; margin-bottom: 1rem;">
+                        <img id="profileAvatar" src="https://ui-avatars.com/api/?name=User&background=6366f1&color=fff"
+                            style="width: 120px; height: 120px; border-radius: 50%; border: 4px solid var(--border-color);">
+                        <button class="btn btn-outline"
+                            style="position: absolute; bottom: 0; right: 0; width: 36px; height: 36px; padding: 0; border-radius: 50%;">
+                            <i class="fa-solid fa-camera" style="font-size: 0.8rem;"></i>
+                        </button>
+                    </div>
+                    <h3 class="font-bold" id="profileName">Loading...</h3>
+                    <p class="text-muted text-sm" id="profileEmail">loading@email.com</p>
+                    <div class="badge badge-outline mt-2" id="profileRole">Affiliate</div>
+                </div>
+
+                <!-- Main Form -->
+                <div class="card">
+                    <h3 class="font-bold mb-6">Personal Information</h3>
+
+                    <div class="grid" style="display: grid; grid-template-columns: 1fr 1fr; gap: 1.5rem;">
+                        <div class="input-group">
+                            <label class="input-label">Full Name</label>
+                            <input type="text" id="nameInput" class="form-control" placeholder="John Doe">
+                        </div>
+                        <div class="input-group">
+                            <label class="input-label">Email Address</label>
+                            <input type="email" id="emailInput" class="form-control" placeholder="john@example.com"
+                                disabled>
+                            <p class="text-xs text-muted mt-1">Email cannot be changed.</p>
+                        </div>
+                        <div class="input-group">
+                            <label class="input-label">Telegram / Skype</label>
+                            <input type="text" id="messengerInput" class="form-control" placeholder="@username">
+                        </div>
+                        <div class="input-group">
+                            <label class="input-label">Preferred Payout Method</label>
+                            <select id="methodInput" class="form-control">
+                                <option value="PayPal">PayPal</option>
+                                <option value="Wire">Wire Transfer</option>
+                                <option value="USDT">USDT (TRC20)</option>
+                                <option value="Bitcoin">Bitcoin (BTC)</option>
+                            </select>
+                        </div>
+                    </div>
+
+                    <div class="mt-6">
+                        <label class="input-label">Payout Address / Details</label>
+                        <textarea id="addressInput" class="form-control" rows="3"
+                            placeholder="Enter your payment details here..."></textarea>
+                    </div>
+
+                    <button class="btn mt-6" id="saveProfile">Save Changes</button>
+                </div>
+            </div>
+        </main>
+    </div>
+
+    <script type="module">
+        import { loadSidebar } from './assets/js/layout.js';
+        import { checkAuth, updateAffiliate } from './assets/js/firebase-config.js';
+
+        loadSidebar();
+
+        let currentUserId;
+
+        checkAuth((user, profile) => {
+            if (user && profile) {
+                currentUserId = user.uid;
+
+                // Populate Identity Card
+                document.getElementById('profileAvatar').src = `https://ui-avatars.com/api/?name=${encodeURIComponent(profile.name || 'User')}&background=6366f1&color=fff&size=256`;
+                document.getElementById('profileName').innerText = profile.name || 'Anonymous User';
+                document.getElementById('profileEmail').innerText = profile.email || user.email;
+                document.getElementById('profileRole').innerText = profile.role ? profile.role.toUpperCase() : 'AFFILIATE';
+
+                // Populate Form
+                document.getElementById('nameInput').value = profile.name || '';
+                document.getElementById('emailInput').value = profile.email || user.email;
+                document.getElementById('messengerInput').value = profile.messenger || '';
+                document.getElementById('methodInput').value = profile.payout_method || 'PayPal';
+                document.getElementById('addressInput').value = profile.payout_address || '';
+            }
+        });
+
+        document.getElementById('saveProfile').addEventListener('click', async () => {
+            const btn = document.getElementById('saveProfile');
+            const data = {
+                name: document.getElementById('nameInput').value.trim(),
+                messenger: document.getElementById('messengerInput').value.trim(),
+                payout_method: document.getElementById('methodInput').value,
+                payout_address: document.getElementById('addressInput').value.trim(),
+                updatedAt: new Date()
+            };
+
+            if (!data.name) {
+                alert('Name is required');
+                return;
+            }
+
+            btn.disabled = true;
+            btn.innerText = 'Saving...';
+
+            try {
+                await updateAffiliate(currentUserId, data);
+                alert('Profile updated successfully!');
+                window.location.reload();
+            } catch (e) {
+                console.error(e);
+                alert('Error updating profile');
+            } finally {
+                btn.disabled = false;
+                btn.innerText = 'Save Changes';
+            }
+        });
+    </script>
+</body>
+
+</html>

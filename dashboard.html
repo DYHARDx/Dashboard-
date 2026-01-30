@@ -1,0 +1,214 @@
+<!DOCTYPE html>
+<html lang="en">
+
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Dashboard - DyHard Panel</title>
+    <link rel="stylesheet" href="assets/css/styles.css">
+    <link href="https://fonts.googleapis.com/css2?family=Plus+Jakarta+Sans:wght@300;400;500;600;700&display=swap"
+        rel="stylesheet">
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+    <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+</head>
+
+<body>
+
+    <div class="layout">
+        <aside class="sidebar" id="sidebarContainer"></aside>
+
+        <!-- Main Content -->
+        <main class="main-content">
+            <!-- Header -->
+            <header class="flex justify-between items-center mb-6">
+                <div>
+                    <h1 class="font-bold" style="font-size: 1.5rem;">Dashboard Overview</h1>
+                    <p class="text-muted text-sm">Welcome back, Admin</p>
+                </div>
+
+                <div class="flex items-center gap-4">
+                    <button class="btn btn-outline" style="width:40px; height:40px; padding:0;"><i
+                            class="fa-regular fa-bell"></i></button>
+                    <div class="flex items-center gap-2"
+                        style="background: var(--bg-card); padding: 5px 10px; border-radius: 30px; border: 1px solid var(--border-color);">
+                        <img src="https://ui-avatars.com/api/?name=Admin+User&background=6366f1&color=fff"
+                            style="width: 32px; height: 32px; border-radius: 50%;">
+                        <span class="text-sm font-bold" style="padding-right: 5px;">Admin</span>
+                    </div>
+                </div>
+            </header>
+
+            <!-- Stats Cards -->
+            <div class="stats-grid">
+                <div class="card">
+                    <div class="flex justify-between items-center mb-4">
+                        <span class="text-muted text-sm">Today's Revenue</span>
+                        <i class="fa-solid fa-dollar-sign text-primary"></i>
+                    </div>
+                    <h2 class="font-bold" id="statRevenue" style="font-size: 1.8rem;">$0.00</h2>
+                    <p class="text-success text-xs mt-1" id="statRevenueTrend">--</p>
+                </div>
+
+                <div class="card">
+                    <div class="flex justify-between items-center mb-4">
+                        <span class="text-muted text-sm">Conversions</span>
+                        <i class="fa-solid fa-check-circle text-success"></i>
+                    </div>
+                    <h2 class="font-bold" id="statConversions" style="font-size: 1.8rem;">0</h2>
+                    <p class="text-success text-xs mt-1">--</p>
+                </div>
+
+                <div class="card">
+                    <div class="flex justify-between items-center mb-4">
+                        <span class="text-muted text-sm">Clicks</span>
+                        <i class="fa-solid fa-mouse-pointer text-warning"></i>
+                    </div>
+                    <h2 class="font-bold" id="statClicks" style="font-size: 1.8rem;">0</h2>
+                    <p class="text-xs mt-1">--</p>
+                </div>
+
+                <div class="card">
+                    <div class="flex justify-between items-center mb-4">
+                        <span class="text-muted text-sm">Pending Approvals</span>
+                        <i class="fa-solid fa-user-clock text-muted"></i>
+                    </div>
+                    <h2 class="font-bold" style="font-size: 1.8rem;">0</h2>
+                    <p class="text-primary text-xs mt-1">--</p>
+                </div>
+            </div>
+
+            <!-- Charts Area -->
+            <div class="card mb-6">
+                <div class="flex justify-between items-center mb-4">
+                    <h3 class="font-bold">Performance Analytics</h3>
+                    <select class="form-control" style="width: auto; padding: 5px 10px; font-size: 0.8rem;">
+                        <option>Last 7 Days</option>
+                    </select>
+                </div>
+                <div style="height: 300px;">
+                    <canvas id="revenueChart"></canvas>
+                </div>
+            </div>
+
+            <!-- Recent Tables -->
+            <div style="display: grid; grid-template-columns: 2fr 1fr; gap: 1.5rem;">
+                <!-- Recent Conversions -->
+                <div class="card">
+                    <div class="flex justify-between items-center mb-4">
+                        <h3 class="font-bold">Recent Conversions</h3>
+                        <a href="conversion_logs.html" class="text-primary text-sm">View All</a>
+                    </div>
+                    <div class="table-container">
+                        <table>
+                            <thead>
+                                <tr>
+                                    <th>ID</th>
+                                    <th>Offer</th>
+                                    <th>Affiliate</th>
+                                    <th>Payout</th>
+                                    <th>Status</th>
+                                </tr>
+                            </thead>
+                            <tbody>
+                                <tr>
+                                    <td colspan="5" class="text-center p-6"><span class="loader"></span></td>
+                                </tr>
+                            </tbody>
+                        </table>
+                    </div>
+                </div>
+
+                <!-- Top Affiliates -->
+                <div class="card">
+                    <h3 class="font-bold mb-4">Top Affiliates</h3>
+                    <div class="flex items-center justify-center text-muted" style="height: 150px;">
+                        <div class="text-center">
+                            <i class="fa-solid fa-chart-simple mb-2"></i>
+                            <p>No performance data available.</p>
+                        </div>
+                    </div>
+                </div>
+            </div>
+
+        </main>
+    </div>
+
+    <script type="module">
+        import { loadSidebar } from './assets/js/layout.js';
+        import { getDashboardStats, getRecentConversions } from './assets/js/firebase-config.js';
+
+        // Load correct sidebar dynamically
+        loadSidebar();
+
+        // 1. Initialize Chart
+        const ctx = document.getElementById('revenueChart').getContext('2d');
+        const gradient = ctx.createLinearGradient(0, 0, 0, 400);
+        gradient.addColorStop(0, 'rgba(99, 102, 241, 0.5)');
+        gradient.addColorStop(1, 'rgba(99, 102, 241, 0.0)');
+
+        const chart = new Chart(ctx, {
+            type: 'line',
+            data: {
+                labels: ['Mon', 'Tue', 'Wed', 'Thu', 'Fri', 'Sat', 'Sun'],
+                datasets: [{
+                    label: 'Revenue ($)',
+                    data: [0, 0, 0, 0, 0, 0, 0], // Default zero
+                    borderColor: '#6366f1',
+                    backgroundColor: gradient,
+                    fill: true,
+                    tension: 0.4
+                }]
+            },
+            options: {
+                responsive: true,
+                maintainAspectRatio: false,
+                plugins: { legend: { display: false } },
+                scales: {
+                    y: {
+                        grid: { color: '#1e293b' },
+                        ticks: { color: '#94a3b8' },
+                        beginAtZero: true
+                    },
+                    x: { grid: { display: false }, ticks: { color: '#94a3b8' } }
+                }
+            }
+        });
+
+        // 2. Load Data
+        async function initDashboard() {
+            try {
+                // A. Stats
+                const stats = await getDashboardStats();
+                document.getElementById('statRevenue').innerText = `$${(stats.revenue || 0).toFixed(2)}`;
+                document.getElementById('statConversions').innerText = stats.conversions || 0;
+                document.getElementById('statClicks').innerText = stats.clicks || 0;
+
+                // B. Recent Conversions
+                const conversions = await getRecentConversions();
+                const tbody = document.querySelector('tbody');
+
+                if (conversions.length === 0) {
+                    tbody.innerHTML = `<tr><td colspan="5" class="text-center p-6 text-muted">No recent conversions.</td></tr>`;
+                } else {
+                    tbody.innerHTML = conversions.map(c => `
+                        <tr>
+                            <td>#${c.id.substr(0, 4)}</td>
+                            <td>${c.offer_name || 'Unknown Offer'}</td>
+                            <td>${c.affiliate_name || 'Unknown Aff'}</td>
+                            <td class="text-success">$${(c.payout || 0).toFixed(2)}</td>
+                            <td><span class="badge badge-success">Approved</span></td>
+                        </tr>
+                    `).join('');
+                }
+
+            } catch (e) {
+                console.error("Dashboard data load failed", e);
+            }
+        }
+
+        initDashboard();
+    </script>
+
+</body>
+
+</html>

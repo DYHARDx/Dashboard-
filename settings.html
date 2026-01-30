@@ -1,0 +1,121 @@
+<!DOCTYPE html>
+<html lang="en">
+
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Settings - DyHard Panel</title>
+    <link rel="stylesheet" href="assets/css/styles.css">
+    <link href="https://fonts.googleapis.com/css2?family=Plus+Jakarta+Sans:wght@300;400;500;600;700&display=swap"
+        rel="stylesheet">
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+</head>
+
+<body>
+
+    <div class="layout">
+        <aside class="sidebar" id="sidebarContainer"></aside>
+
+        <main class="main-content">
+            <header class="flex justify-between items-center mb-6">
+                <div>
+                    <h1 class="font-bold" style="font-size: 1.5rem;">Settings</h1>
+                    <p class="text-muted text-sm">Manage your account and platform preferences</p>
+                </div>
+                <button class="btn" id="saveBtn">Save Changes</button>
+            </header>
+
+            <div class="stats-grid">
+                <div class="card">
+                    <h3 class="font-bold mb-4">Profile Settings</h3>
+                    <div class="input-group mb-4">
+                        <label class="input-label">Display Name</label>
+                        <input type="text" class="form-control" id="displayName" placeholder="Admin User">
+                    </div>
+                    <div class="input-group">
+                        <label class="input-label">Email Address</label>
+                        <input type="email" class="form-control" value="admin@dyhard.com" disabled>
+                    </div>
+                </div>
+
+                <div class="card">
+                    <h3 class="font-bold mb-4">Security</h3>
+                    <div class="input-group mb-4">
+                        <label class="input-label">New Password</label>
+                        <input type="password" class="form-control" placeholder="••••••••" disabled
+                            title="Use Firebase Auth Console to change password">
+                    </div>
+                </div>
+            </div>
+
+            <div class="card mt-6">
+                <h3 class="font-bold mb-4">Platform Configuration</h3>
+                <div class="flex gap-4">
+                    <div class="input-group w-full">
+                        <label class="input-label">Platform Name</label>
+                        <input type="text" class="form-control" id="platformName" placeholder="DyHard Panel">
+                    </div>
+                    <div class="input-group w-full">
+                        <label class="input-label">Support Email</label>
+                        <input type="text" class="form-control" id="supportEmail" placeholder="support@dyhard.com">
+                    </div>
+                </div>
+            </div>
+
+        </main>
+    </div>
+
+    <script type="module">
+        import { loadSidebar } from './assets/js/layout.js';
+        import { getSettings, saveSettings } from './assets/js/firebase-config.js';
+
+        loadSidebar();
+
+        // Load Settings
+        async function loadData() {
+            try {
+                const data = await getSettings();
+                if (data) {
+                    if (data.displayName) document.getElementById('displayName').value = data.displayName;
+                    if (data.platformName) document.getElementById('platformName').value = data.platformName;
+                    if (data.supportEmail) document.getElementById('supportEmail').value = data.supportEmail;
+                }
+            } catch (e) { console.error(e); }
+        }
+        loadData();
+
+        // Save Logic
+        document.getElementById('saveBtn').addEventListener('click', async () => {
+            const btn = document.getElementById('saveBtn');
+            const oldContent = btn.innerHTML;
+            btn.innerHTML = '<span class="loader" style="width:16px;height:16px;border-top-color:white;"></span> Saving...';
+
+            const data = {
+                displayName: document.getElementById('displayName').value,
+                platformName: document.getElementById('platformName').value,
+                supportEmail: document.getElementById('supportEmail').value
+            };
+
+            try {
+                await saveSettings(data);
+
+                btn.innerHTML = '<i class="fa-solid fa-check"></i> Saved!';
+                btn.classList.add('badge-success');
+                btn.style.color = 'var(--success)';
+                btn.style.background = 'var(--success-bg)';
+
+                setTimeout(() => {
+                    btn.innerHTML = oldContent;
+                    btn.classList.remove('badge-success');
+                    btn.style.color = 'white';
+                    btn.style.background = 'var(--primary)';
+                }, 2000);
+            } catch (err) {
+                alert('Error saving settings: ' + err.message);
+                btn.innerHTML = oldContent;
+            }
+        });
+    </script>
+</body>
+
+</html>

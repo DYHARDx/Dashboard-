@@ -1,0 +1,103 @@
+<!DOCTYPE html>
+<html lang="en">
+
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Offers - Affiliate Panel</title>
+    <link rel="stylesheet" href="assets/css/styles.css">
+    <link href="https://fonts.googleapis.com/css2?family=Plus+Jakarta+Sans:wght@300;400;500;600;700&display=swap"
+        rel="stylesheet">
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+</head>
+
+<body>
+
+    <div class="layout">
+        <aside class="sidebar" id="sidebarContainer"></aside>
+
+        <main class="main-content">
+            <header class="flex justify-between items-center mb-6">
+                <div>
+                    <h1 class="font-bold" style="font-size: 1.5rem;">Available Offers</h1>
+                    <p class="text-muted text-sm">Browse and promote high-converting offers</p>
+                </div>
+            </header>
+
+            <div class="card">
+                <div class="table-container">
+                    <table id="offersTable">
+                        <thead>
+                            <tr>
+                                <th>Offer Name</th>
+                                <th>Category</th>
+                                <th>Payout</th>
+                                <th>Type</th>
+                                <th>Action</th>
+                            </tr>
+                        </thead>
+                        <tbody>
+                            <tr>
+                                <td colspan="5" class="text-center p-6"><span class="loader"></span></td>
+                            </tr>
+                        </tbody>
+                    </table>
+                </div>
+            </div>
+        </main>
+    </div>
+
+    <script type="module">
+        import { loadSidebar } from './assets/js/layout.js';
+        import { getOffers, checkAuth } from './assets/js/firebase-config.js';
+
+        loadSidebar();
+
+        let currentAffiliateId = 'YOUR_ID';
+
+        checkAuth((user) => {
+            if (user) {
+                currentAffiliateId = user.uid;
+                loadData();
+            }
+        });
+
+        async function loadData() {
+            const tbody = document.querySelector('#offersTable tbody');
+            try {
+                const offers = await getOffers();
+                if (offers.length === 0) {
+                    tbody.innerHTML = `<tr><td colspan="5" class="text-center p-6 text-muted">No active offers available right now.</td></tr>`;
+                    return;
+                }
+                tbody.innerHTML = offers.map(o => `
+                    <tr>
+                        <td>
+                            <div class="font-bold">${o.name}</div>
+                            <div class="text-muted text-xs">ID: #${o.id.substr(0, 8)}</div>
+                        </td>
+                        <td><span class="badge badge-outline">${o.category || 'CPA'}</span></td>
+                        <td class="text-success font-bold">$${(o.payout || 0).toFixed(2)}</td>
+                        <td>${o.type || 'PPD'}</td>
+                        <td>
+                            <button class="btn btn-outline text-xs" onclick="copyLink('${o.id}')">
+                                <i class="fa-solid fa-link mr-1"></i> Get Link
+                            </button>
+                        </td>
+                    </tr>
+                `).join('');
+            } catch (e) {
+                tbody.innerHTML = `<tr><td colspan="5" class="text-center text-danger">Error loading offers.</td></tr>`;
+            }
+        }
+
+        window.copyLink = (offerId) => {
+            const link = `https://pyronex.app/click?o=${offerId}&a=${currentAffiliateId}`;
+            navigator.clipboard.writeText(link).then(() => {
+                alert(`Tracking link copied to clipboard!\n\n${link}`);
+            });
+        };
+    </script>
+</body>
+
+</html>

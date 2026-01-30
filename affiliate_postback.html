@@ -1,0 +1,116 @@
+<!DOCTYPE html>
+<html lang="en">
+
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Postback Setup - Affiliate Panel</title>
+    <link rel="stylesheet" href="assets/css/styles.css">
+    <link href="https://fonts.googleapis.com/css2?family=Plus+Jakarta+Sans:wght@300;400;500;600;700&display=swap"
+        rel="stylesheet">
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+    <style>
+        .token-box {
+            background: rgba(109, 40, 217, 0.1);
+            border: 1px dashed var(--primary);
+            padding: 1rem;
+            border-radius: 8px;
+            font-family: monospace;
+            color: #c4b5fd;
+            margin: 10px 0;
+        }
+    </style>
+</head>
+
+<body>
+
+    <div class="layout">
+        <aside class="sidebar" id="sidebarContainer"></aside>
+
+        <main class="main-content">
+            <header class="flex justify-between items-center mb-6">
+                <div>
+                    <h1 class="font-bold" style="font-size: 1.5rem;">S2S Postback Setup</h1>
+                    <p class="text-muted text-sm">Configure your global postback URL for automated tracking</p>
+                </div>
+            </header>
+
+            <div class="card mb-6">
+                <h3 class="font-bold mb-4">Postback Configuration</h3>
+                <p class="text-sm text-muted mb-4">When a conversion is approved, our system will ping your URL with the
+                    following tokens:</p>
+
+                <div class="grid"
+                    style="display: grid; grid-template-columns: repeat(auto-fit, minmax(200px, 1fr)); gap: 1rem;">
+                    <div class="token-box text-xs"><code>{click_id}</code> - Your Unique Click ID</div>
+                    <div class="token-box text-xs"><code>{payout}</code> - Conversion Payout Amount</div>
+                    <div class="token-box text-xs"><code>{subid}</code> - Optional Sub-ID / Track ID</div>
+                    <div class="token-box text-xs"><code>{offer_id}</code> - ID of the converted offer</div>
+                </div>
+
+                <div class="mt-6">
+                    <label class="input-label">Global Postback URL</label>
+                    <input type="text" id="postbackInput" class="form-control"
+                        placeholder="https://your-tracker.com/postback?click_id={click_id}&payout={payout}">
+                    <p class="text-xs text-muted mt-2">Example:
+                        <code>https://your-tracker.com/postback?cid={click_id}&amt={payout}</code></p>
+                </div>
+
+                <button class="btn mt-4" id="savePostback">Save Postback URL</button>
+            </div>
+
+            <div class="card">
+                <h3 class="font-bold mb-4">Tracking Guide</h3>
+                <div style="color: var(--text-secondary); font-size: 0.9rem;">
+                    <p class="mb-2">1. When promoting an offer, append your click ID to the <code>&a=</code> parameter.
+                    </p>
+                    <p class="mb-2">2. Our system stores that ID and returns it via the <code>{click_id}</code> token
+                        upon conversion.</p>
+                    <p class="mb-2">3. Make sure your server can handle <code>GET</code> requests.</p>
+                </div>
+            </div>
+        </main>
+    </div>
+
+    <script type="module">
+        import { loadSidebar } from './assets/js/layout.js';
+        import { checkAuth, updateAffiliate } from './assets/js/firebase-config.js';
+
+        loadSidebar();
+
+        let currentUserId;
+
+        checkAuth((user, profile) => {
+            if (user && profile) {
+                currentUserId = user.uid;
+                if (profile.postback_url) {
+                    document.getElementById('postbackInput').value = profile.postback_url;
+                }
+            }
+        });
+
+        document.getElementById('savePostback').addEventListener('click', async () => {
+            const url = document.getElementById('postbackInput').value.trim();
+            if (!url) {
+                alert('Please enter a valid URL');
+                return;
+            }
+
+            const btn = document.getElementById('savePostback');
+            btn.disabled = true;
+            btn.innerText = 'Saving...';
+
+            try {
+                await updateAffiliate(currentUserId, { postback_url: url });
+                alert('Postback URL updated successfully!');
+            } catch (e) {
+                alert('Error saving postback URL');
+            } finally {
+                btn.disabled = false;
+                btn.innerText = 'Save Postback URL';
+            }
+        });
+    </script>
+</body>
+
+</html>

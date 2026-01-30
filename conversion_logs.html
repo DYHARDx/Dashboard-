@@ -1,0 +1,72 @@
+<!DOCTYPE html>
+<html lang="en">
+
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Conversion Logs - Pyronex Admin</title>
+    <link rel="stylesheet" href="assets/css/styles.css">
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700&display=swap" rel="stylesheet">
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+</head>
+
+<body>
+    <div class="layout">
+        <aside class="sidebar" id="sidebarContainer"></aside>
+        <main class="main-content">
+            <header class="mb-6">
+                <h1 class="font-bold" style="font-size: 1.5rem;">Conversion Logs</h1>
+                <p class="text-muted text-sm">Raw data of every conversion event</p>
+            </header>
+
+            <div class="card">
+                <div class="table-container">
+                    <table id="logsTable">
+                        <thead>
+                            <tr>
+                                <th>Click ID</th>
+                                <th>Offer ID</th>
+                                <th>Affiliate ID</th>
+                                <th>IP Address</th>
+                                <th>User Agent</th>
+                                <th>Timestamp</th>
+                            </tr>
+                        </thead>
+                        <tbody>
+                            <tr>
+                                <td colspan="6" class="text-center p-6"><span class="loader"></span></td>
+                            </tr>
+                        </tbody>
+                    </table>
+                </div>
+            </div>
+        </main>
+    </div>
+    <script type="module">
+        import { loadSidebar } from './assets/js/layout.js';
+        import { getRecentConversions } from './assets/js/firebase-config.js';
+
+        loadSidebar();
+
+        // Load logs
+        getRecentConversions().then(data => {
+            const tbody = document.querySelector('tbody');
+            if (!data.length) {
+                tbody.innerHTML = '<tr><td colspan="6" class="text-center p-6 text-muted">No logs available</td></tr>';
+                return;
+            }
+            tbody.innerHTML = data.map(log => `
+            <tr>
+                <td>${log.id}</td>
+                <td>${log.offer_id}</td>
+                <td>${log.affiliate_id}</td>
+                <td>${log.ip || 'Unknown'}</td>
+                <td title="${log.ua || ''}">Hover to view</td>
+                <td>${log.timestamp ? new Date(log.timestamp.seconds * 1000).toLocaleString() : '-'}</td>
+            </tr>
+        `).join('');
+        });
+    </script>
+</body>
+
+</html>

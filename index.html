@@ -1,0 +1,130 @@
+<!DOCTYPE html>
+<html lang="en">
+
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Login - Pyronex Admin</title>
+    <link rel="stylesheet" href="assets/css/styles.css">
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700&display=swap" rel="stylesheet">
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+    <style>
+        .login-bg {
+            position: absolute;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100%;
+            background: url('https://images.unsplash.com/photo-1550745165-9bc0b252726f?q=80&w=2070&auto=format&fit=crop') center/cover no-repeat;
+            opacity: 0.1;
+            z-index: -1;
+        }
+    </style>
+</head>
+
+<body class="auth-wrapper">
+    <div class="login-bg"></div>
+
+    <div class="card auth-card">
+        <div class="text-center mb-6">
+            <div class="logo justify-center">
+                <i class="fa-solid fa-fire text-primary"></i> PYRO<span>NEX</span>
+            </div>
+            <p class="text-muted">Enter credentials to access admin panel</p>
+        </div>
+
+        <form id="loginForm">
+            <div id="registerFields" class="hidden">
+                <div class="input-group">
+                    <label class="input-label">Full Name</label>
+                    <div style="position: relative;">
+                        <i class="fa-regular fa-user"
+                            style="position: absolute; left: 15px; top: 14px; color: #64748b;"></i>
+                        <input type="text" id="fullname" class="form-control" placeholder="John Doe"
+                            style="padding-left: 45px;">
+                    </div>
+                </div>
+            </div>
+
+            <div class="input-group">
+                <label class="input-label">Email Address</label>
+                <div style="position: relative;">
+                    <i class="fa-regular fa-envelope"
+                        style="position: absolute; left: 15px; top: 14px; color: #64748b;"></i>
+                    <input type="email" id="email" class="form-control" placeholder="admin@pyronex.app"
+                        style="padding-left: 45px;" required value="admin@pyronex.app">
+                </div>
+            </div>
+
+            <div class="input-group">
+                <label class="input-label">Password</label>
+                <div style="position: relative;">
+                    <i class="fa-solid fa-lock" style="position: absolute; left: 15px; top: 14px; color: #64748b;"></i>
+                    <input type="password" id="password" class="form-control" placeholder="••••••••"
+                        style="padding-left: 45px;" required value="password123">
+                </div>
+            </div>
+
+            <button type="submit" class="btn w-full mb-4">
+                <span id="btnText">Sign In</span>
+                <span id="btnLoader" class="loader hidden"></span>
+            </button>
+
+            <div class="text-center">
+                <a href="#" class="text-sm text-muted hover:underline">Forgot Password?</a>
+            </div>
+
+            <div class="mt-4 pt-4 border-t border-color"
+                style="border-top: 1px solid var(--border-color); display:none;">
+                <!-- Demo Removed -->
+            </div>
+        </form>
+    </div>
+
+    <script type="module">
+        import { loginUser, getUserProfile } from './assets/js/firebase-config.js';
+
+        const loginForm = document.getElementById('loginForm');
+        const btnText = document.getElementById('btnText');
+        const btnLoader = document.getElementById('btnLoader');
+
+        loginForm.addEventListener('submit', async (e) => {
+            e.preventDefault();
+            const email = document.getElementById('email').value;
+            const password = document.getElementById('password').value;
+
+            // Loading state
+            btnText.classList.add('hidden');
+            btnLoader.classList.remove('hidden');
+
+            try {
+                const cred = await loginUser(email, password);
+                const user = cred.user;
+
+                // Get profile to check role
+                const profile = await getUserProfile(user.uid);
+
+                if (profile && profile.role === 'admin') {
+                    window.location.href = 'dashboard.html';
+                } else {
+                    // Default to affiliate dashboard or a pending page
+                    window.location.href = 'affiliate_dashboard.html';
+                }
+
+            } catch (error) {
+                console.error(error);
+                if (error.code === 'auth/api-key-not-valid' || error.message.includes('API key')) {
+                    alert('Firebase is not configured yet! Please edit assets/js/firebase-config.js');
+                } else if (error.code === 'auth/email-already-in-use') {
+                    alert('Email already registered. Please Sign In.');
+                } else {
+                    alert('Error: ' + error.message);
+                }
+                btnText.classList.remove('hidden');
+                btnLoader.classList.add('hidden');
+            }
+        });
+    </script>
+</body>
+
+</html>

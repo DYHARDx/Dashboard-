@@ -1,0 +1,97 @@
+<!DOCTYPE html>
+<html lang="en">
+
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Reports - Affiliate Panel</title>
+    <link rel="stylesheet" href="assets/css/styles.css">
+    <link href="https://fonts.googleapis.com/css2?family=Plus+Jakarta+Sans:wght@300;400;500;600;700&display=swap"
+        rel="stylesheet">
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+</head>
+
+<body>
+
+    <div class="layout">
+        <aside class="sidebar" id="sidebarContainer"></aside>
+
+        <main class="main-content">
+            <header class="flex justify-between items-center mb-6">
+                <div>
+                    <h1 class="font-bold" style="font-size: 1.5rem;">Performance Reports</h1>
+                    <p class="text-muted text-sm">Detailed logs of your conversions and earnings</p>
+                </div>
+                <div class="flex gap-2">
+                    <button class="btn btn-outline text-xs"><i class="fa-solid fa-download mr-1"></i> Export</button>
+                    <select class="form-control" style="width: auto; padding: 5px 10px; font-size: 0.8rem;">
+                        <option>Last 30 Days</option>
+                        <option>This Month</option>
+                    </select>
+                </div>
+            </header>
+
+            <div class="card">
+                <div class="table-container">
+                    <table id="reportsTable">
+                        <thead>
+                            <tr>
+                                <th>Date & Time</th>
+                                <th>Conversion ID</th>
+                                <th>Offer Name</th>
+                                <th>Sub ID</th>
+                                <th>Payout</th>
+                                <th>Status</th>
+                            </tr>
+                        </thead>
+                        <tbody>
+                            <tr>
+                                <td colspan="6" class="text-center p-6"><span class="loader"></span></td>
+                            </tr>
+                        </tbody>
+                    </table>
+                </div>
+            </div>
+        </main>
+    </div>
+
+    <script type="module">
+        import { loadSidebar } from './assets/js/layout.js';
+        import { checkAuth, getAffiliateConversions } from './assets/js/firebase-config.js';
+
+        loadSidebar();
+
+        checkAuth(async (user, profile) => {
+            if (user) {
+                loadReports(user.uid);
+            }
+        });
+
+        async function loadReports(affiliateId) {
+            const tbody = document.querySelector('#reportsTable tbody');
+            try {
+                const data = await getAffiliateConversions(affiliateId);
+                if (data.length === 0) {
+                    tbody.innerHTML = `<tr><td colspan="6" class="text-center p-6 text-muted">No conversion data found for this period.</td></tr>`;
+                    return;
+                }
+                tbody.innerHTML = data.map(c => `
+                    <tr>
+                        <td class="text-sm">
+                            ${c.timestamp ? new Date(c.timestamp.seconds * 1000).toLocaleString() : 'Recent'}
+                        </td>
+                        <td><code style="background:rgba(255,255,255,0.05); padding:2px 6px; border-radius:4px; font-size:0.8rem;">${c.id.substr(0, 12)}</code></td>
+                        <td class="font-bold">${c.offer_name || 'N/A'}</td>
+                        <td><span class="text-muted text-xs">${c.subid || '---'}</span></td>
+                        <td class="text-success font-bold">$${(c.payout || 0).toFixed(2)}</td>
+                        <td><span class="badge badge-success">${c.status || 'Approved'}</span></td>
+                    </tr>
+                `).join('');
+            } catch (e) {
+                tbody.innerHTML = `<tr><td colspan="6" class="text-center p-6 text-danger">Error loading report data.</td></tr>`;
+            }
+        }
+    </script>
+</body>
+
+</html>

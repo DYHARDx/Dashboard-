@@ -1,0 +1,257 @@
+<!DOCTYPE html>
+<html lang="en">
+
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Affiliate Dashboard - DyHard Panel</title>
+    <link rel="stylesheet" href="assets/css/styles.css">
+    <link href="https://fonts.googleapis.com/css2?family=Plus+Jakarta+Sans:wght@300;400;500;600;700&display=swap"
+        rel="stylesheet">
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+    <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+</head>
+
+<body>
+
+    <div class="layout">
+        <aside class="sidebar" id="sidebarContainer"></aside>
+
+        <!-- Main Content -->
+        <main class="main-content">
+            <!-- Header -->
+            <header class="flex justify-between items-center mb-6">
+                <div>
+                    <h1 class="font-bold" style="font-size: 1.5rem;">Affiliate Overview</h1>
+                    <p class="text-muted text-sm" id="welcomeText">Welcome back, Affiliate</p>
+                </div>
+
+                <div class="flex items-center gap-4">
+                    <button class="btn btn-outline" style="width:40px; height:40px; padding:0;"><i
+                            class="fa-regular fa-bell"></i></button>
+                    <div class="flex items-center gap-2"
+                        style="background: var(--bg-card); padding: 5px 10px; border-radius: 30px; border: 1px solid var(--border-color);">
+                        <img id="userAvatar" src="https://ui-avatars.com/api/?name=User&background=6366f1&color=fff"
+                            style="width: 32px; height: 32px; border-radius: 50%;">
+                        <span class="text-sm font-bold" style="padding-right: 5px;" id="userName">Affiliate</span>
+                    </div>
+                </div>
+            </header>
+
+            <!-- Stats Cards -->
+            <div class="stats-grid">
+                <div class="card">
+                    <div class="flex justify-between items-center mb-4">
+                        <span class="text-muted text-sm">Main Balance</span>
+                        <i class="fa-solid fa-wallet text-primary"></i>
+                    </div>
+                    <h2 class="font-bold" id="statBalance" style="font-size: 1.8rem;">$0.00</h2>
+                    <p class="text-success text-xs mt-1">Available for payout</p>
+                </div>
+
+                <div class="card">
+                    <div class="flex justify-between items-center mb-4">
+                        <span class="text-muted text-sm">Today's Earnings</span>
+                        <i class="fa-solid fa-dollar-sign text-success"></i>
+                    </div>
+                    <h2 class="font-bold" id="statTodayEarnings" style="font-size: 1.8rem;">$0.00</h2>
+                    <p class="text-success text-xs mt-1">--</p>
+                </div>
+
+                <div class="card">
+                    <div class="flex justify-between items-center mb-4">
+                        <span class="text-muted text-sm">Clicks</span>
+                        <i class="fa-solid fa-mouse-pointer text-warning"></i>
+                    </div>
+                    <h2 class="font-bold" id="statClicks" style="font-size: 1.8rem;">0</h2>
+                    <p class="text-xs mt-1">--</p>
+                </div>
+
+                <div class="card">
+                    <div class="flex justify-between items-center mb-4">
+                        <span class="text-muted text-sm">Conversions</span>
+                        <i class="fa-solid fa-check-circle text-muted"></i>
+                    </div>
+                    <h2 class="font-bold" id="statConversions" style="font-size: 1.8rem;">0</h2>
+                    <p class="text-primary text-xs mt-1">--</p>
+                </div>
+            </div>
+
+            <!-- Charts Area -->
+            <div class="card mb-6">
+                <div class="flex justify-between items-center mb-4">
+                    <h3 class="font-bold">Your Performance</h3>
+                    <select class="form-control" style="width: auto; padding: 5px 10px; font-size: 0.8rem;">
+                        <option>Last 7 Days</option>
+                    </select>
+                </div>
+                <div style="height: 300px;">
+                    <canvas id="performanceChart"></canvas>
+                </div>
+            </div>
+
+            <!-- Recent Tables -->
+            <div style="display: grid; grid-template-columns: 2fr 1fr; gap: 1.5rem;">
+                <!-- Recent Conversions -->
+                <div class="card">
+                    <div class="flex justify-between items-center mb-4">
+                        <h3 class="font-bold">Recent Conversions</h3>
+                        <a href="affiliate_reports.html" class="text-primary text-sm">View All</a>
+                    </div>
+                    <div class="table-container">
+                        <table>
+                            <thead>
+                                <tr>
+                                    <th>ID</th>
+                                    <th>Offer</th>
+                                    <th>Payout</th>
+                                    <th>Date</th>
+                                    <th>Status</th>
+                                </tr>
+                            </thead>
+                            <tbody id="conversionsTable">
+                                <tr>
+                                    <td colspan="5" class="text-center p-6 text-muted">No conversions found.</td>
+                                </tr>
+                            </tbody>
+                        </table>
+                    </div>
+                </div>
+
+                <!-- Featured Offers -->
+                <div class="card">
+                    <h3 class="font-bold mb-4">Active Offers</h3>
+                    <div id="offersList" class="flex flex-col gap-4">
+                        <div class="text-center p-6 text-muted">
+                            <i class="fa-solid fa-gift mb-2"></i>
+                            <p>No active offers assigned.</p>
+                        </div>
+                    </div>
+                    <a href="affiliate_offers.html" class="btn btn-outline w-full mt-4">Browse All Offers</a>
+                </div>
+            </div>
+
+        </main>
+    </div>
+
+    <script type="module">
+        import { loadSidebar } from './assets/js/layout.js';
+        import { checkAuth, getAffiliateConversions, getAffiliateStats, getOffers } from './assets/js/firebase-config.js';
+
+        loadSidebar();
+
+        // 1. Auth & Data Loading
+        checkAuth(async (user, profile) => {
+            if (user && profile) {
+                // Update Profile Info
+                document.getElementById('welcomeText').innerText = `Welcome back, ${profile.name || 'Affiliate'}`;
+                document.getElementById('userName').innerText = profile.name || 'Affiliate';
+                document.getElementById('userAvatar').src = `https://ui-avatars.com/api/?name=${encodeURIComponent(profile.name || 'User')}&background=6366f1&color=fff`;
+                document.getElementById('statBalance').innerText = `$${(profile.balance || 0).toFixed(2)}`;
+
+                // Fetch Affiliate Stats
+                const stats = await getAffiliateStats(user.uid);
+                document.getElementById('statTodayEarnings').innerText = `$${(stats.todayEarnings || 0).toFixed(2)}`;
+                document.getElementById('statClicks').innerText = stats.clicks || 0;
+                document.getElementById('statConversions').innerText = stats.conversions || 0;
+
+                // Load Recent Conversions
+                loadConversions(user.uid);
+
+                // Load Featured Offers
+                loadFeaturedOffers();
+
+                // Update Chart with dummy trend but real today value
+                updateChart(stats.todayEarnings);
+            }
+        });
+
+        async function loadConversions(affiliateId) {
+            const tbody = document.getElementById('conversionsTable');
+            try {
+                const conversions = await getAffiliateConversions(affiliateId);
+                if (conversions.length === 0) {
+                    tbody.innerHTML = `<tr><td colspan="5" class="text-center p-6 text-muted">No conversions found.</td></tr>`;
+                    return;
+                }
+                tbody.innerHTML = conversions.map(c => `
+                    <tr>
+                        <td>#${c.id.substr(0, 4)}</td>
+                        <td>${c.offer_name || 'Unknown Offer'}</td>
+                        <td class="text-success">$${(c.payout || 0).toFixed(2)}</td>
+                        <td>${c.timestamp ? new Date(c.timestamp.seconds * 1000).toLocaleDateString() : 'Today'}</td>
+                        <td><span class="badge badge-success">${c.status || 'Approved'}</span></td>
+                    </tr>
+                `).join('');
+            } catch (e) {
+                tbody.innerHTML = `<tr><td colspan="5" class="text-center p-6 text-danger">Error loading conversions.</td></tr>`;
+            }
+        }
+
+        async function loadFeaturedOffers() {
+            const list = document.getElementById('offersList');
+            try {
+                const offers = await getOffers();
+                const featured = offers.slice(0, 3); // Just show top 3
+                if (featured.length === 0) return;
+
+                list.innerHTML = featured.map(o => `
+                    <div class="flex items-center justify-between p-3" style="background: rgba(255,255,255,0.03); border-radius: 10px; border: 1px solid var(--border-color);">
+                        <div>
+                            <div class="font-bold text-sm">${o.name}</div>
+                            <div class="text-xs text-muted">${o.category || 'CPA'} • ${o.type || 'PPD'}</div>
+                        </div>
+                        <div class="text-right">
+                            <div class="text-success font-bold">$${(o.payout || 0).toFixed(2)}</div>
+                            <a href="affiliate_offers.html" class="text-xs text-primary">Get Link</a>
+                        </div>
+                    </div>
+                `).join('');
+            } catch (e) {
+                console.error("Error loading offers:", e);
+            }
+        }
+
+        // 2. Performance Chart
+        let performanceChart;
+        function updateChart(todayVal) {
+            const ctx = document.getElementById('performanceChart').getContext('2d');
+            const gradient = ctx.createLinearGradient(0, 0, 0, 400);
+            gradient.addColorStop(0, 'rgba(109, 40, 217, 0.5)');
+            gradient.addColorStop(1, 'rgba(109, 40, 217, 0.0)');
+
+            if (performanceChart) performanceChart.destroy();
+
+            performanceChart = new Chart(ctx, {
+                type: 'line',
+                data: {
+                    labels: ['Mon', 'Tue', 'Wed', 'Thu', 'Fri', 'Sat', 'Sun'],
+                    datasets: [{
+                        label: 'Earnings ($)',
+                        // Simulated data with real 'Today' value at the end
+                        data: [12, 19, 15, 25, 22, 30, todayVal || 0],
+                        borderColor: '#6d28d9',
+                        backgroundColor: gradient,
+                        fill: true,
+                        tension: 0.4
+                    }]
+                },
+                options: {
+                    responsive: true,
+                    maintainAspectRatio: false,
+                    plugins: { legend: { display: false } },
+                    scales: {
+                        y: {
+                            grid: { color: '#27272a' },
+                            ticks: { color: '#71717a' },
+                            beginAtZero: true
+                        },
+                        x: { grid: { display: false }, ticks: { color: '#71717a' } }
+                    }
+                }
+            });
+        }
+    </script>
+</body>
+
+</html>

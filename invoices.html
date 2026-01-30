@@ -1,0 +1,78 @@
+<!DOCTYPE html>
+<html lang="en">
+
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Invoices - Pyronex Admin</title>
+    <link rel="stylesheet" href="assets/css/styles.css">
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700&display=swap" rel="stylesheet">
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+</head>
+
+<body>
+
+    <div class="layout">
+        <aside class="sidebar" id="sidebarContainer"></aside>
+
+        <main class="main-content">
+            <header class="flex justify-between items-center mb-6">
+                <div>
+                    <h1 class="font-bold" style="font-size: 1.5rem;">Billing & Invoices</h1>
+                    <p class="text-muted text-sm">Review and approve affiliate payment requests</p>
+                </div>
+                <div class="card p-2" style="background:var(--bg-card); border:1px solid var(--border-color);">
+                    <span class="text-muted text-sm mr-2">Net unpaid:</span> <span
+                        class="text-danger font-bold">$0.00</span>
+                </div>
+            </header>
+
+            <div class="card">
+                <div class="table-container">
+                    <table id="invTable">
+                        <thead>
+                            <tr>
+                                <th>Invoice ID</th>
+                                <th>Affiliate</th>
+                                <th>Amount</th>
+                                <th>Date</th>
+                                <th>Method</th>
+                                <th>Status</th>
+                                <th>Actions</th>
+                            </tr>
+                        </thead>
+                        <tbody>
+                            <tr>
+                                <td colspan="7" class="text-center p-6"><span class="loader"></span></td>
+                            </tr>
+                        </tbody>
+                    </table>
+                </div>
+            </div>
+        </main>
+    </div>
+
+    <script type="module">
+        import { loadSidebar } from './assets/js/layout.js';
+        import { getInvoices } from './assets/js/firebase-config.js';
+
+        loadSidebar();
+
+        async function loadData() {
+            const tbody = document.querySelector('#invTable tbody');
+            try {
+                const data = await getInvoices();
+                if (data.length === 0) {
+                    tbody.innerHTML = `<tr><td colspan="7" class="text-center p-6 text-muted">No pending invoices.</td></tr>`;
+                    return;
+                }
+                // Render logic here same as others
+            } catch (e) {
+                console.error(e);
+            }
+        }
+        loadData();
+    </script>
+</body>
+
+</html>

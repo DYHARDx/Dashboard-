@@ -1,0 +1,517 @@
+@import url('https://fonts.googleapis.com/css2?family=Plus+Jakarta+Sans:wght@300;400;500;600;700&display=swap');
+
+:root {
+    /* Premium "Dyhard" Palette */
+    --bg-body: #09090b;
+    /* Extremely dark grey, almost black */
+    --bg-sidebar: #101012;
+    /* Slightly lighter for contrast */
+    --bg-card: #161618;
+    /* Surface color */
+
+    /* Primary Accents - Electric Indigo/Violet */
+    --primary: #6d28d9;
+    --primary-hover: #5b21b6;
+    --primary-subtle: rgba(109, 40, 217, 0.1);
+    /* Low opacity for backgrounds */
+
+    /* Text Colors */
+    --text-main: #ffffff;
+    --text-secondary: #a1a1aa;
+    /* Zinc-400 */
+    --text-muted: #71717a;
+    /* Zinc-500 */
+
+    /* Functional Colors */
+    --success: #10b981;
+    /* Emerald */
+    --success-bg: rgba(16, 185, 129, 0.15);
+
+    --warning: #f59e0b;
+    /* Amber */
+    --warning-bg: rgba(245, 158, 11, 0.15);
+
+    --danger: #ef4444;
+    /* Red */
+    --danger-bg: rgba(239, 68, 68, 0.15);
+
+    /* UI Elements */
+    --border-color: #27272a;
+    /* Zinc-800 - Subtle borders */
+    --sidebar-width: 280px;
+    --header-height: 70px;
+    --radius: 16px;
+    /* Modern rounded corners */
+
+    /* Effects */
+    --shadow-sm: 0 1px 2px 0 rgba(0, 0, 0, 0.05);
+    --shadow-md: 0 4px 6px -1px rgba(0, 0, 0, 0.1), 0 2px 4px -1px rgba(0, 0, 0, 0.06);
+    --shadow-lg: 0 10px 15px -3px rgba(0, 0, 0, 0.3), 0 4px 6px -2px rgba(0, 0, 0, 0.15);
+    --glow-primary: 0 0 20px rgba(109, 40, 217, 0.3);
+}
+
+* {
+    box-sizing: border-box;
+    margin: 0;
+    padding: 0;
+}
+
+body {
+    background-color: var(--bg-body);
+    color: var(--text-main);
+    font-family: 'Plus Jakarta Sans', system-ui, -apple-system, sans-serif;
+    line-height: 1.6;
+    -webkit-font-smoothing: antialiased;
+    overflow-x: hidden;
+}
+
+a {
+    text-decoration: none;
+    color: inherit;
+    transition: all 0.2s ease;
+}
+
+ul {
+    list-style: none;
+}
+
+/* --- Layout Utility --- */
+.layout {
+    display: flex;
+    min-height: 100vh;
+}
+
+/* Sidebar - Professional & Sleek */
+.sidebar {
+    width: var(--sidebar-width);
+    background-color: var(--bg-sidebar);
+    border-right: 1px solid var(--border-color);
+    position: fixed;
+    height: 100vh;
+    padding: 1.5rem;
+    display: flex;
+    flex-direction: column;
+    z-index: 50;
+    transition: width 0.3s ease;
+}
+
+/* Sidebar Navigation - Scrollable Area */
+.sidebar nav {
+    flex: 1;
+    overflow-y: auto;
+    margin-right: -10px;
+    /* Pull scrollbar to edge */
+    padding-right: 10px;
+    /* Push content back */
+
+    /* Firefox */
+    scrollbar-width: thin;
+    scrollbar-color: #3f3f46 transparent;
+}
+
+/* Custom Scrollbar for Sidebar Nav */
+.sidebar nav::-webkit-scrollbar {
+    width: 4px;
+}
+
+.sidebar nav::-webkit-scrollbar-track {
+    background: transparent;
+}
+
+.sidebar nav::-webkit-scrollbar-thumb {
+    background-color: #3f3f46;
+    border-radius: 20px;
+}
+
+.logo {
+    font-size: 1.25rem;
+    font-weight: 700;
+    color: white;
+    margin-bottom: 2rem;
+    flex-shrink: 0;
+    /* Prevent logo shrinking */
+    display: flex;
+    align-items: center;
+    gap: 12px;
+    padding: 0 0.5rem;
+    letter-spacing: -0.5px;
+}
+
+.logo i {
+    color: var(--primary);
+    filter: drop-shadow(0 0 8px rgba(109, 40, 217, 0.6));
+    font-size: 1.4rem;
+}
+
+.nav-item {
+    display: flex;
+    align-items: center;
+    padding: 0.75rem 1rem;
+    /* Slightly reduced padding to fit more items */
+    color: var(--text-secondary);
+    border-radius: 12px;
+    /* Softer pill shape */
+    margin-bottom: 0.25rem;
+    font-weight: 500;
+    font-size: 0.925rem;
+    border: 1px solid transparent;
+    white-space: nowrap;
+    /* Prevent text wrapping */
+}
+
+.nav-item:hover {
+    background-color: rgba(255, 255, 255, 0.03);
+    color: white;
+}
+
+.nav-item.active {
+    background: linear-gradient(90deg, rgba(109, 40, 217, 0.15) 0%, rgba(109, 40, 217, 0.05) 100%);
+    color: #c4b5fd;
+    /* Soft violet text */
+    border-color: rgba(109, 40, 217, 0.2);
+}
+
+.nav-item.active i {
+    color: #a78bfa;
+}
+
+.nav-item i {
+    margin-right: 14px;
+    width: 22px;
+    text-align: center;
+    font-size: 1.1em;
+    transition: 0.2s;
+}
+
+
+/* Main Content Area */
+.main-content {
+    margin-left: var(--sidebar-width);
+    flex: 1;
+    padding: 2.5rem 3rem;
+    width: calc(100% - var(--sidebar-width));
+}
+
+/* Header */
+header h1 {
+    font-size: 1.8rem;
+    letter-spacing: -0.025em;
+    color: white;
+}
+
+header p {
+    color: var(--text-secondary);
+}
+
+/* --- Components --- */
+
+/* Cards - The core of the UI */
+.card {
+    background-color: var(--bg-card);
+    border: 1px solid var(--border-color);
+    border-radius: var(--radius);
+    padding: 1.75rem;
+    box-shadow: var(--shadow-sm);
+    transition: transform 0.2s ease, border-color 0.2s ease, box-shadow 0.2s ease;
+    position: relative;
+    overflow: hidden;
+}
+
+.card:hover {
+    border-color: rgba(255, 255, 255, 0.1);
+    box-shadow: var(--shadow-md);
+}
+
+/* Grids */
+.stats-grid {
+    display: grid;
+    grid-template-columns: repeat(auto-fit, minmax(260px, 1fr));
+    gap: 1.5rem;
+    margin-bottom: 2.5rem;
+}
+
+/* Typography in Cards */
+.card h2 {
+    font-size: 2rem;
+    letter-spacing: -1px;
+    margin-top: 5px;
+}
+
+.card .text-label {
+    font-size: 0.875rem;
+    color: var(--text-secondary);
+    font-weight: 500;
+}
+
+
+/* Buttons */
+.btn {
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    padding: 0.75rem 1.5rem;
+    border-radius: 12px;
+    background-color: var(--primary);
+    color: white;
+    font-weight: 600;
+    font-size: 0.95rem;
+    border: none;
+    cursor: pointer;
+    transition: all 0.2s ease;
+    box-shadow: 0 4px 12px rgba(109, 40, 217, 0.3);
+}
+
+.btn:hover {
+    background-color: var(--primary-hover);
+    transform: translateY(-2px);
+    box-shadow: 0 6px 16px rgba(109, 40, 217, 0.4);
+}
+
+.btn-outline {
+    background: transparent;
+    border: 1px solid var(--border-color);
+    box-shadow: none;
+    color: var(--text-main);
+}
+
+.btn-outline:hover {
+    background: rgba(255, 255, 255, 0.03);
+    border-color: var(--text-secondary);
+    transform: translateY(-1px);
+}
+
+/* Inputs & Forms */
+.form-control {
+    width: 100%;
+    padding: 0.85rem 1rem;
+    background-color: #0c0c0e;
+    /* Darker than card */
+    border: 1px solid var(--border-color);
+    border-radius: 10px;
+    color: white;
+    font-size: 0.95rem;
+    transition: 0.2s;
+}
+
+.form-control:focus {
+    outline: none;
+    border-color: var(--primary);
+    box-shadow: 0 0 0 2px rgba(109, 40, 217, 0.25);
+    background-color: #121214;
+}
+
+.input-label {
+    display: block;
+    margin-bottom: 0.5rem;
+    font-size: 0.9rem;
+    font-weight: 500;
+    color: var(--text-secondary);
+}
+
+/* Tables - Professional & Clean */
+.table-container {
+    overflow-x: auto;
+}
+
+table {
+    width: 100%;
+    border-collapse: separate;
+    border-spacing: 0;
+}
+
+th {
+    text-align: left;
+    padding: 1rem 1.5rem;
+    color: var(--text-muted);
+    font-weight: 600;
+    font-size: 0.8rem;
+    text-transform: uppercase;
+    letter-spacing: 0.05em;
+    border-bottom: 1px solid var(--border-color);
+}
+
+td {
+    padding: 1.25rem 1.5rem;
+    border-bottom: 1px solid var(--border-color);
+    color: var(--text-main);
+    font-size: 0.925rem;
+}
+
+tr:last-child td {
+    border-bottom: none;
+}
+
+tr:hover td {
+    background-color: rgba(255, 255, 255, 0.015);
+}
+
+/* Badges */
+.badge {
+    padding: 0.35rem 0.85rem;
+    border-radius: 30px;
+    font-size: 0.75rem;
+    font-weight: 700;
+    letter-spacing: 0.02em;
+    display: inline-block;
+}
+
+.badge-success {
+    background: var(--success-bg);
+    color: var(--success);
+    border: 1px solid rgba(16, 185, 129, 0.2);
+}
+
+.badge-warning {
+    background: var(--warning-bg);
+    color: var(--warning);
+    border: 1px solid rgba(245, 158, 11, 0.2);
+}
+
+.badge-danger {
+    background: var(--danger-bg);
+    color: var(--danger);
+    border: 1px solid rgba(239, 68, 68, 0.2);
+}
+
+/* Utilities */
+.flex {
+    display: flex;
+}
+
+.justify-between {
+    justify-content: space-between;
+}
+
+.items-center {
+    align-items: center;
+}
+
+.gap-2 {
+    gap: 0.5rem;
+}
+
+.gap-4 {
+    gap: 1rem;
+}
+
+.text-success {
+    color: var(--success);
+}
+
+.text-danger {
+    color: var(--danger);
+}
+
+.text-muted {
+    color: var(--text-muted);
+}
+
+.text-primary {
+    color: var(--primary);
+}
+
+.font-bold {
+    font-weight: 700;
+}
+
+.w-full {
+    width: 100%;
+}
+
+.mb-4 {
+    margin-bottom: 1rem;
+}
+
+.mb-6 {
+    margin-bottom: 1.5rem;
+}
+
+.mt-1 {
+    margin-top: 0.25rem;
+}
+
+.text-sm {
+    font-size: 0.875rem;
+}
+
+.text-xs {
+    font-size: 0.75rem;
+}
+
+.hidden {
+    display: none !important;
+}
+
+/* Loader */
+.loader {
+    width: 20px;
+    height: 20px;
+    border: 2px solid rgba(255, 255, 255, 0.1);
+    border-top: 2px solid var(--primary);
+    border-radius: 50%;
+    animation: spin 0.8s linear infinite;
+    display: inline-block;
+}
+
+@keyframes spin {
+    to {
+        transform: rotate(360deg);
+    }
+}
+
+/* Scrollbar */
+::-webkit-scrollbar {
+    width: 8px;
+    height: 8px;
+}
+
+::-webkit-scrollbar-track {
+    background: var(--bg-body);
+}
+
+::-webkit-scrollbar-thumb {
+    background: #3f3f46;
+    border-radius: 4px;
+}
+
+::-webkit-scrollbar-thumb:hover {
+    background: #52525b;
+}
+
+/* Modal Styles */
+.modal-overlay {
+    position: fixed;
+    top: 0;
+    left: 0;
+    width: 100%;
+    height: 100%;
+    background: rgba(0, 0, 0, 0.6);
+    z-index: 100;
+    display: none;
+    align-items: center;
+    justify-content: center;
+    backdrop-filter: blur(4px);
+    opacity: 0;
+    transition: opacity 0.3s ease;
+}
+
+.modal-overlay.active {
+    display: flex;
+    opacity: 1;
+}
+
+.modal-content {
+    background: var(--bg-card);
+    padding: 2rem;
+    border-radius: var(--radius);
+    width: 90%;
+    max-width: 500px;
+    border: 1px solid var(--border-color);
+    box-shadow: 0 20px 25px -5px rgba(0, 0, 0, 0.5), 0 10px 10px -5px rgba(0, 0, 0, 0.2);
+    transform: scale(0.95);
+    transition: transform 0.3s ease;
+}
+
+.modal-overlay.active .modal-content {
+    transform: scale(1);
+}
