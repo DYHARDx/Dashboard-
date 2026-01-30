@@ -78,35 +78,43 @@
                     return;
                 }
 
-                tbody.innerHTML = offers.map(offer => `
-                <tr>
-                    <td>
-                        <div class="font-bold">${offer.title}</div>
-                        <div class="text-muted text-xs">${offer.category || 'General'} • ${offer.revenueType}</div>
-                    </td>
-                    <td><span class="text-sm font-medium">${advMap[offer.advertiserId] || 'Direct'}</span></td>
-                    <td class="text-success font-bold">$${(offer.payout || 0).toFixed(2)}</td>
-                    <td><span class="badge badge-warning">${offer.geo}</span></td>
-                    <td>
-                        <span class="text-xs uppercase font-bold text-muted">${offer.access || 'public'}</span>
-                    </td>
-                    <td>
-                        <span class="badge ${offer.status === 'active' ? 'badge-success' : 'badge-danger'}">
-                            ${offer.status || 'active'}
-                        </span>
-                    </td>
-                    <td>
-                        <div class="flex gap-2">
-                            <a href="create_offer.html?id=${offer.id}" class="btn btn-outline text-xs" title="Edit">
-                                <i class="fa-solid fa-pen"></i>
-                            </a>
-                            <button onclick="window.deleteOfferAction('${offer.id}')" class="btn btn-outline text-xs text-danger" title="Delete">
-                                <i class="fa-solid fa-trash"></i>
-                            </button>
-                        </div>
-                    </td>
-                </tr>
-            `).join('');
+                tbody.innerHTML = offers.map(offer => {
+                    const basePath = window.location.pathname.substring(0, window.location.pathname.lastIndexOf('/') + 1);
+                    const trackerUrl = `${window.location.origin}${basePath}click.html?o=${offer.id}&a=ADMIN`;
+
+                    return `
+                    <tr>
+                        <td>
+                            <div class="font-bold">${offer.title}</div>
+                            <div class="text-muted text-xs">ID: <code class="text-primary">${offer.id.substr(0, 8)}</code> • ${offer.category || 'General'}</div>
+                        </td>
+                        <td><span class="text-sm font-medium">${advMap[offer.advertiserId] || 'Direct'}</span></td>
+                        <td class="text-success font-bold">$${(offer.payout || 0).toFixed(2)}</td>
+                        <td><span class="badge badge-warning">${offer.geo}</span></td>
+                        <td>
+                            <span class="text-xs uppercase font-bold text-muted">${offer.access || 'public'}</span>
+                        </td>
+                        <td>
+                            <span class="badge ${offer.status === 'active' ? 'badge-success' : 'badge-danger'}">
+                                ${offer.status || 'active'}
+                            </span>
+                        </td>
+                        <td>
+                            <div class="flex gap-2">
+                                <button onclick="navigator.clipboard.writeText('${trackerUrl}'); alert('Admin tracking link copied!')" class="btn btn-outline text-xs" title="Copy Tracker">
+                                    <i class="fa-solid fa-link"></i>
+                                </button>
+                                <a href="create_offer.html?id=${offer.id}" class="btn btn-outline text-xs" title="Edit">
+                                    <i class="fa-solid fa-pen"></i>
+                                </a>
+                                <button onclick="window.deleteOfferAction('${offer.id}')" class="btn btn-outline text-xs text-danger" title="Delete">
+                                    <i class="fa-solid fa-trash"></i>
+                                </button>
+                            </div>
+                        </td>
+                    </tr>
+                `;
+                }).join('');
 
             } catch (error) {
                 console.error(error);

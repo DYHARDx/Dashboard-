@@ -63,6 +63,20 @@
                         </div>
                     </div>
 
+                    <div id="generatedLinkArea" class="hidden">
+                        <div class="input-group">
+                            <label class="input-label text-primary">Affiliate Tracking Link (Example)</label>
+                            <div class="flex gap-2">
+                                <input type="text" id="generatedLink" class="form-control" readonly
+                                    style="background: var(--bg-body);">
+                                <button type="button" class="btn btn-outline" onclick="window.copyAdminLink()"><i
+                                        class="fa-solid fa-copy"></i></button>
+                            </div>
+                            <small class="text-muted">This is how the link will look for affiliates (using a test
+                                ID).</small>
+                        </div>
+                    </div>
+
                     <div style="border-top: 1px solid var(--border-color); margin: 2rem 0;"></div>
 
                     <h3 class="font-bold mb-4 text-primary">Payout & Targeting</h3>
@@ -175,11 +189,27 @@
                     document.getElementById('access').value = offer.access || 'public';
                     document.getElementById('category').value = offer.category || 'General';
                     document.getElementById('status').value = offer.status || 'active';
+
+                    // Show Generated Link for Admin
+                    const area = document.getElementById('generatedLinkArea');
+                    const linkInput = document.getElementById('generatedLink');
+                    const basePath = window.location.pathname.substring(0, window.location.pathname.lastIndexOf('/') + 1);
+                    const link = `${window.location.origin}${basePath}click.html?o=${id}&a=AFFILIATE_ID`;
+
+                    linkInput.value = link;
+                    area.classList.remove('hidden');
                 }
             } catch (error) {
                 console.error("Error loading offer:", error);
             }
         }
+
+        window.copyAdminLink = () => {
+            const link = document.getElementById('generatedLink').value;
+            navigator.clipboard.writeText(link).then(() => {
+                alert('Example tracking link copied!');
+            });
+        };
 
         document.getElementById('offerForm').addEventListener('submit', async (e) => {
             e.preventDefault();
