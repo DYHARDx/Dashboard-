@@ -85,8 +85,9 @@
 
         // Dynamic URL Display
         const codeBlock = document.getElementById('postbackUrlDisplay');
-        const baseUrl = window.location.origin;
-        codeBlock.innerText = `${baseUrl}/api/postback?click_id={CLICK_ID}&payout={PAYOUT}&txn_id={TXN_ID}`;
+        const basePath = window.location.pathname.substring(0, window.location.pathname.lastIndexOf('/') + 1);
+        const baseUrl = window.location.origin + basePath;
+        codeBlock.innerText = `${baseUrl}api/postback?click_id={CLICK_ID}&payout={PAYOUT}&txn_id={TXN_ID}`;
 
         // Copy functionality
         codeBlock.style.cursor = 'pointer';
