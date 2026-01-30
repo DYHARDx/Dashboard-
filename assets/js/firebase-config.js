@@ -222,11 +222,10 @@ export const getAffiliateConversions = async (affiliateId) => {
 
 export const getAffiliateStats = async (affiliateId) => {
     try {
-        // In a production app, you'd use a dedicated 'affiliate_analytics' collection
-        // For now, we'll fetch today's conversions to calculate earnings
         const today = new Date();
         today.setHours(0, 0, 0, 0);
 
+        // 1. Fetch Earnings & Conversions
         const q = query(
             collection(db, "conversions"),
             where("affiliate_id", "==", affiliateId),
@@ -243,12 +242,15 @@ export const getAffiliateStats = async (affiliateId) => {
             conversions++;
         });
 
-        // Clicks are harder to count without a dedicated collection, 
-        // return dummy or look in 'clicks' collection if it exists
+        // 2. Fetch Clicks from analytics collection
+        const affAnalyticsRef = doc(db, "affiliate_analytics", affiliateId);
+        const affAnalyticsSnap = await getDoc(affAnalyticsRef);
+        const clicks = affAnalyticsSnap.exists() ? (affAnalyticsSnap.data().clicks || 0) : 0;
+
         return {
             todayEarnings: earnings,
             conversions: conversions,
-            clicks: conversions * 12 // Simulated clicks for UI
+            clicks: clicks
         };
     } catch (e) {
         console.error("Error fetching affiliate stats:", e);
