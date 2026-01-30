@@ -69,6 +69,15 @@
 
                 <div class="card">
                     <div class="flex justify-between items-center mb-4">
+                        <span class="text-muted text-sm">CTR %</span>
+                        <i class="fa-solid fa-percent text-info"></i>
+                    </div>
+                    <h2 class="font-bold" id="statCTR" style="font-size: 1.8rem;">0.00%</h2>
+                    <p class="text-info text-xs mt-1">Conversion rate</p>
+                </div>
+
+                <div class="card">
+                    <div class="flex justify-between items-center mb-4">
                         <span class="text-muted text-sm">Pending Approvals</span>
                         <i class="fa-solid fa-user-clock text-muted"></i>
                     </div>
@@ -182,6 +191,9 @@
                 document.getElementById('statRevenue').innerText = `$${(stats.revenue || 0).toFixed(2)}`;
                 document.getElementById('statConversions').innerText = stats.conversions || 0;
                 document.getElementById('statClicks').innerText = stats.clicks || 0;
+
+                const ctr = stats.clicks > 0 ? (stats.conversions / stats.clicks) * 100 : 0;
+                document.getElementById('statCTR').innerText = `${ctr.toFixed(2)}%`;
 
                 // B. Recent Conversions
                 const conversions = await getRecentConversions();
