@@ -200,7 +200,10 @@
         };
 
         window.copyLink = (offerId) => {
-            const link = `${window.location.origin}/click.html?o=${offerId}&a=${currentAffiliateId}`;
+            // Derive the base path (e.g., /Dashboard-/) to support GitHub Pages subfolders
+            const basePath = window.location.pathname.substring(0, window.location.pathname.lastIndexOf('/') + 1);
+            const link = `${window.location.origin}${basePath}click.html?o=${offerId}&a=${currentAffiliateId}`;
+
             navigator.clipboard.writeText(link).then(() => {
                 alert(`Tracking link copied to clipboard!\n\n${link}`);
             });
