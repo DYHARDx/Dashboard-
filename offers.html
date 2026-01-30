@@ -4,9 +4,10 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Offers - Pyronex Admin</title>
+    <title>Offers - DyHard Panel</title>
     <link rel="stylesheet" href="assets/css/styles.css">
-    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700&display=swap" rel="stylesheet">
+    <link href="https://fonts.googleapis.com/css2?family=Plus+Jakarta+Sans:wght@300;400;500;600;700&display=swap"
+        rel="stylesheet">
     <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
 </head>
 
@@ -19,7 +20,7 @@
             <header class="flex justify-between items-center mb-6">
                 <div>
                     <h1 class="font-bold" style="font-size: 1.5rem;">All Offers</h1>
-                    <p class="text-muted text-sm">Manage your tracking campaigns</p>
+                    <p class="text-muted text-sm">Manage tracking campaigns and payouts</p>
                 </div>
 
                 <a href="create_offer.html" class="btn">
@@ -32,19 +33,19 @@
                     <table id="offersTable">
                         <thead>
                             <tr>
-                                <th>ID</th>
-                                <th>Offer Name</th>
+                                <th>Offer</th>
+                                <th>Advertiser</th>
                                 <th>Payout</th>
                                 <th>Geo</th>
+                                <th>Access</th>
                                 <th>Status</th>
                                 <th>Actions</th>
                             </tr>
                         </thead>
                         <tbody>
-                            <!-- Loading State -->
                             <tr>
-                                <td colspan="6" class="text-center p-6">
-                                    <span class="loader" style="width: 30px; height: 30px;"></span>
+                                <td colspan="7" class="text-center p-6">
+                                    <span class="loader"></span>
                                     <p class="text-muted mt-2">Loading offers...</p>
                                 </td>
                             </tr>
@@ -57,57 +58,75 @@
 
     <script type="module">
         import { loadSidebar } from './assets/js/layout.js';
-        import { getOffers } from './assets/js/firebase-config.js';
+        import { getOffers, deleteOffer, getAdvertisers } from './assets/js/firebase-config.js';
 
         loadSidebar();
 
-        async function loadOffers() {
+        async function loadData() {
             const tbody = document.querySelector('#offersTable tbody');
 
             try {
-                const offers = await getOffers();
+                const [offers, advertisers] = await Promise.all([
+                    getOffers(),
+                    getAdvertisers()
+                ]);
+
+                const advMap = advertisers.reduce((acc, a) => ({ ...acc, [a.id]: a.name }), {});
 
                 if (offers.length === 0) {
-                    tbody.innerHTML = `
-                    <tr>
-                        <td colspan="6" class="text-center p-6 text-muted">
-                            No offers found. Create your first one!
-                        </td>
-                    </tr>
-                `;
+                    tbody.innerHTML = `<tr><td colspan="7" class="text-center p-6 text-muted">No offers found.</td></tr>`;
                     return;
                 }
 
                 tbody.innerHTML = offers.map(offer => `
                 <tr>
-                    <td><span class="text-muted text-xs">#${offer.id.substr(0, 6)}</span></td>
                     <td>
                         <div class="font-bold">${offer.title}</div>
-                        <div class="text-muted text-xs">${offer.revenueType}</div>
+                        <div class="text-muted text-xs">${offer.category || 'General'} • ${offer.revenueType}</div>
                     </td>
-                    <td class="text-success font-bold">$${offer.payout.toFixed(2)}</td>
+                    <td><span class="text-sm font-medium">${advMap[offer.advertiserId] || 'Direct'}</span></td>
+                    <td class="text-success font-bold">$${(offer.payout || 0).toFixed(2)}</td>
                     <td><span class="badge badge-warning">${offer.geo}</span></td>
-                    <td><span class="badge badge-success">${offer.status}</span></td>
                     <td>
-                        <button class="btn btn-outline" style="padding: 5px 10px;"><i class="fa-solid fa-pen"></i></button>
-                        <button class="btn btn-outline" style="padding: 5px 10px; color: var(--danger); border-color: var(--danger);"><i class="fa-solid fa-trash"></i></button>
+                        <span class="text-xs uppercase font-bold text-muted">${offer.access || 'public'}</span>
+                    </td>
+                    <td>
+                        <span class="badge ${offer.status === 'active' ? 'badge-success' : 'badge-danger'}">
+                            ${offer.status || 'active'}
+                        </span>
+                    </td>
+                    <td>
+                        <div class="flex gap-2">
+                            <a href="create_offer.html?id=${offer.id}" class="btn btn-outline text-xs" title="Edit">
+                                <i class="fa-solid fa-pen"></i>
+                            </a>
+                            <button onclick="window.deleteOfferAction('${offer.id}')" class="btn btn-outline text-xs text-danger" title="Delete">
+                                <i class="fa-solid fa-trash"></i>
+                            </button>
+                        </div>
                     </td>
                 </tr>
             `).join('');
 
             } catch (error) {
                 console.error(error);
-                tbody.innerHTML = `
-                <tr>
-                    <td colspan="6" class="text-center p-6 text-danger">
-                        Failed to load data. Make sure Firebase Config is set.
-                    </td>
-                </tr>
-            `;
+                tbody.innerHTML = `<tr><td colspan="7" class="text-center text-danger p-6">Error loading data</td></tr>`;
             }
         }
 
-        loadOffers();
+        window.deleteOfferAction = async (id) => {
+            if (confirm('Are you sure you want to delete this offer?')) {
+                try {
+                    await deleteOffer(id);
+                    alert('Offer deleted successfully!');
+                    loadData();
+                } catch (err) {
+                    alert('Error deleting offer: ' + err.message);
+                }
+            }
+        };
+
+        loadData();
     </script>
 
 </body>

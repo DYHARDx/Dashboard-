@@ -4,7 +4,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Offers - Affiliate Panel</title>
+    <title>Available Offers - DyHard Panel</title>
     <link rel="stylesheet" href="assets/css/styles.css">
     <link href="https://fonts.googleapis.com/css2?family=Plus+Jakarta+Sans:wght@300;400;500;600;700&display=swap"
         rel="stylesheet">
@@ -24,15 +24,25 @@
                 </div>
             </header>
 
+            <!-- Search & Filter Bar -->
+            <div class="card mb-6" style="padding: 1rem;">
+                <div class="flex gap-4">
+                    <div class="input-group w-full mb-0">
+                        <input type="text" id="searchInput" class="form-control"
+                            placeholder="Search by name, category or geo...">
+                    </div>
+                </div>
+            </div>
+
             <div class="card">
                 <div class="table-container">
                     <table id="offersTable">
                         <thead>
                             <tr>
                                 <th>Offer Name</th>
-                                <th>Category</th>
                                 <th>Payout</th>
                                 <th>Type</th>
+                                <th>Geo</th>
                                 <th>Action</th>
                             </tr>
                         </thead>
@@ -47,13 +57,31 @@
         </main>
     </div>
 
+    <!-- Details Modal -->
+    <div class="modal-overlay" id="detailsModal">
+        <div class="modal-content" style="max-width: 600px;">
+            <div class="flex justify-between items-center mb-4">
+                <h3 class="font-bold" id="modalOfferTitle">Offer Details</h3>
+                <button class="btn-outline text-muted" style="border:none;" id="closeModal"><i
+                        class="fa-solid fa-xmark"></i></button>
+            </div>
+            <div id="modalOfferContent">
+                <!-- Content injected here -->
+            </div>
+            <div class="mt-6 flex gap-2" id="modalActions">
+                <!-- Actions injected here -->
+            </div>
+        </div>
+    </div>
+
     <script type="module">
         import { loadSidebar } from './assets/js/layout.js';
         import { getOffers, checkAuth } from './assets/js/firebase-config.js';
 
         loadSidebar();
 
-        let currentAffiliateId = 'YOUR_ID';
+        let currentAffiliateId = '';
+        let allActiveOffers = [];
 
         checkAuth((user) => {
             if (user) {
@@ -66,36 +94,121 @@
             const tbody = document.querySelector('#offersTable tbody');
             try {
                 const offers = await getOffers();
-                if (offers.length === 0) {
-                    tbody.innerHTML = `<tr><td colspan="5" class="text-center p-6 text-muted">No active offers available right now.</td></tr>`;
-                    return;
-                }
-                tbody.innerHTML = offers.map(o => `
-                    <tr>
-                        <td>
-                            <div class="font-bold">${o.name}</div>
-                            <div class="text-muted text-xs">ID: #${o.id.substr(0, 8)}</div>
-                        </td>
-                        <td><span class="badge badge-outline">${o.category || 'CPA'}</span></td>
-                        <td class="text-success font-bold">$${(o.payout || 0).toFixed(2)}</td>
-                        <td>${o.type || 'PPD'}</td>
-                        <td>
-                            <button class="btn btn-outline text-xs" onclick="copyLink('${o.id}')">
-                                <i class="fa-solid fa-link mr-1"></i> Get Link
-                            </button>
-                        </td>
-                    </tr>
-                `).join('');
+                allActiveOffers = offers.filter(o => o.status === 'active');
+                renderOffers(allActiveOffers);
             } catch (e) {
-                tbody.innerHTML = `<tr><td colspan="5" class="text-center text-danger">Error loading offers.</td></tr>`;
+                console.error(e);
+                tbody.innerHTML = `<tr><td colspan="5" class="text-center text-danger p-6">Error loading offers.</td></tr>`;
             }
         }
 
+        function renderOffers(offers) {
+            const tbody = document.querySelector('#offersTable tbody');
+            if (offers.length === 0) {
+                tbody.innerHTML = `<tr><td colspan="5" class="text-center p-6 text-muted">No matching offers found.</td></tr>`;
+                return;
+            }
+
+            tbody.innerHTML = offers.map(o => `
+                <tr>
+                    <td>
+                        <div class="font-bold">${o.title}</div>
+                        <div class="text-muted text-xs">${o.category || 'General'} • ID: #${o.id.substr(0, 8)}</div>
+                    </td>
+                    <td class="text-success font-bold">$${(o.payout || 0).toFixed(2)}</td>
+                    <td><span class="badge badge-outline" style="border-color: var(--primary-color); color: var(--primary-color);">${o.revenueType}</span></td>
+                    <td><span class="badge badge-warning">${o.geo}</span></td>
+                    <td>
+                        <div class="flex gap-2">
+                            <button class="btn btn-outline text-xs" onclick="window.viewDetails('${o.id}')">
+                                <i class="fa-solid fa-eye mr-1"></i> View
+                            </button>
+                            ${o.access === 'request' ?
+                    `<button class="btn btn-outline text-xs" style="color:var(--warning); border-color:var(--warning);" onclick="window.requestAccess('${o.id}')">
+                                    <i class="fa-solid fa-lock mr-1"></i> Request
+                                </button>` :
+                    `<button class="btn text-xs" onclick="window.copyLink('${o.id}')">
+                                    <i class="fa-solid fa-link mr-1"></i> Get Link
+                                </button>`
+                }
+                        </div>
+                    </td>
+                </tr>
+            `).join('');
+        }
+
+        // Search Logic
+        document.getElementById('searchInput').oninput = (e) => {
+            const query = e.target.value.toLowerCase();
+            const filtered = allActiveOffers.filter(o =>
+                o.title.toLowerCase().includes(query) ||
+                (o.category && o.category.toLowerCase().includes(query)) ||
+                o.geo.toLowerCase().includes(query)
+            );
+            renderOffers(filtered);
+        };
+
+        const modal = document.getElementById('detailsModal');
+        const closeModal = document.getElementById('closeModal');
+        closeModal.onclick = () => modal.classList.remove('active');
+
+        window.viewDetails = (id) => {
+            const offer = allActiveOffers.find(o => o.id === id);
+            if (!offer) return;
+
+            document.getElementById('modalOfferTitle').innerText = offer.title;
+            document.getElementById('modalOfferContent').innerHTML = `
+                <div class="mb-4">
+                    <label class="text-muted text-xs block mb-1">DESCRIPTION</label>
+                    <p class="text-sm p-3 bg-light rounded">${offer.description || 'No specialized instructions for this offer.'}</p>
+                </div>
+                <div class="grid grid-cols-2 gap-4">
+                    <div class="p-3 border rounded">
+                        <label class="text-muted text-xs block mb-1">PAYOUT</label>
+                        <p class="font-bold text-success text-lg">$${(offer.payout || 0).toFixed(2)}</p>
+                    </div>
+                    <div class="p-3 border rounded">
+                        <label class="text-muted text-xs block mb-1">TYPE</label>
+                        <p class="font-bold">${offer.revenueType}</p>
+                    </div>
+                </div>
+                <div class="mt-4 flex items-center justify-between p-3 bg-light rounded">
+                    <div>
+                        <label class="text-muted text-xs block">TARGETING</label>
+                        <span class="badge badge-warning">${offer.geo}</span>
+                    </div>
+                    <div>
+                        <label class="text-muted text-xs block">CATEGORY</label>
+                        <span class="text-sm font-bold text-primary">${offer.category || 'General'}</span>
+                    </div>
+                </div>
+            `;
+
+            const actionsDiv = document.getElementById('modalActions');
+            if (offer.access === 'request') {
+                actionsDiv.innerHTML = `
+                    <button class="btn w-full" onclick="window.requestAccess('${offer.id}')">Apply to Run this Offer</button>
+                `;
+            } else {
+                actionsDiv.innerHTML = `
+                    <button class="btn w-full" onclick="window.copyLink('${offer.id}')">Copy Tracking Link</button>
+                    <a href="${offer.previewUrl}" target="_blank" class="btn btn-outline w-full text-center">Preview Page</a>
+                `;
+            }
+
+            modal.classList.add('active');
+        };
+
         window.copyLink = (offerId) => {
-            const link = `https://pyronex.app/click?o=${offerId}&a=${currentAffiliateId}`;
+            const link = `${window.location.origin}/click.html?o=${offerId}&a=${currentAffiliateId}`;
             navigator.clipboard.writeText(link).then(() => {
                 alert(`Tracking link copied to clipboard!\n\n${link}`);
             });
+        };
+
+        window.requestAccess = (offerId) => {
+            alert('Your request to run this offer has been sent to the managers for approval.');
+            // In a real app, you would write to an 'approvals' collection here
         };
     </script>
 </body>

@@ -1,0 +1,204 @@
+<!DOCTYPE html>
+<html lang="en">
+
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Tracking... - DyHard Panel</title>
+    <link rel="stylesheet" href="assets/css/styles.css">
+    <link href="https://fonts.googleapis.com/css2?family=Plus+Jakarta+Sans:wght@300;400;500;600;700&display=swap"
+        rel="stylesheet">
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+    <style>
+        body {
+            height: 100vh;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            background: #09090b;
+            color: white;
+            flex-direction: column;
+            text-align: center;
+            overflow: hidden;
+        }
+
+        .loader-ring {
+            width: 80px;
+            height: 80px;
+            border: 4px solid rgba(109, 40, 217, 0.1);
+            border-top: 4px solid #6d28d9;
+            border-radius: 50%;
+            animation: spin 1s linear infinite;
+            margin-bottom: 2rem;
+        }
+
+        @keyframes spin {
+            0% {
+                transform: rotate(0deg);
+            }
+
+            100% {
+                transform: rotate(360deg);
+            }
+        }
+
+        .status-text {
+            font-size: 1.2rem;
+            font-weight: 600;
+            margin-bottom: 0.5rem;
+            opacity: 0.9;
+        }
+
+        .sub-text {
+            font-size: 0.9rem;
+            color: #71717a;
+        }
+
+        .hidden {
+            display: none !important;
+        }
+
+        .mt-6 {
+            margin-top: 1.5rem;
+        }
+
+        .btn {
+            display: inline-block;
+            padding: 0.75rem 1.5rem;
+            background-color: #6d28d9;
+            color: white;
+            text-decoration: none;
+            border-radius: 0.375rem;
+            font-weight: 600;
+            transition: background-color 0.2s ease-in-out;
+        }
+
+        .btn:hover {
+            background-color: #5b21b6;
+        }
+    </style>
+</head>
+
+<body>
+
+    <div class="loader-ring" id="loader"></div>
+    <div class="status-text" id="status">Verifying link...</div>
+    <div class="sub-text" id="subtext">Please wait while we redirect you to the secure offer.</div>
+
+    <!-- Fallback Button -->
+    <div id="fallback" class="hidden mt-6">
+        <a href="#" id="manualLink" class="btn">Click here to continue</a>
+    </div>
+
+    <script type="module">
+        import { db } from './assets/js/firebase-config.js';
+        import { doc, getDoc, addDoc, collection, serverTimestamp } from "https://www.gstatic.com/firebasejs/10.7.1/firebase-firestore.js";
+
+        async function processClick() {
+            const statusEl = document.getElementById('status');
+            const subtextEl = document.getElementById('subtext');
+            const loaderEl = document.getElementById('loader');
+            const fallbackEl = document.getElementById('fallback');
+            const manualLink = document.getElementById('manualLink');
+
+            const urlParams = new URLSearchParams(window.location.search);
+            const offerId = urlParams.get('o');
+            const affiliateId = urlParams.get('a');
+            const subId = urlParams.get('subid') || '';
+
+            console.log("Processing click for Offer:", offerId, "Affiliate:", affiliateId);
+
+            if (!offerId || !affiliateId) {
+                statusEl.innerText = "Invalid Tracking Link";
+                statusEl.style.color = "#ef4444";
+                subtextEl.innerText = "The link parameters are missing required information.";
+                loaderEl.style.display = "none";
+                return;
+            }
+
+            try {
+                // 1. Fetch Offer Data
+                const offerRef = doc(db, "offers", offerId);
+                const offerSnap = await getDoc(offerRef);
+
+                if (!offerSnap.exists()) {
+                    statusEl.innerText = "Offer Inactive";
+                    statusEl.style.color = "#ef4444";
+                    subtextEl.innerText = "This offer is no longer available or has been disabled.";
+                    loaderEl.style.display = "none";
+                    return;
+                }
+
+                const offer = offerSnap.data();
+
+                if (!offer.trackingUrl) {
+                    throw new Error("Tracking URL not configured for this offer.");
+                }
+
+                // 2. Log Click in Firestore
+                console.log("Logging click...");
+                let clickId = "offline_" + Date.now();
+
+                try {
+                    const clickRef = await addDoc(collection(db, "clicks"), {
+                        offer_id: offerId,
+                        offer_title: offer.title || "Unknown",
+                        affiliate_id: affiliateId,
+                        subid: subId,
+                        timestamp: serverTimestamp(),
+                        user_agent: navigator.userAgent
+                    });
+                    clickId = clickRef.id;
+                } catch (dbErr) {
+                    console.warn("Could not log click to database, proceeding anyway:", dbErr);
+                }
+
+                statusEl.innerText = "Redirecting...";
+                loaderEl.style.borderTopColor = "#10b981";
+
+                // 3. Prepare Final URL
+                let finalUrl = offer.trackingUrl.trim();
+
+                // Fix missing protocol
+                if (!finalUrl.startsWith('http://') && !finalUrl.startsWith('https://')) {
+                    finalUrl = 'https://' + finalUrl;
+                }
+
+                // Replace macros
+                if (finalUrl.includes('{click_id}')) {
+                    finalUrl = finalUrl.replace('{click_id}', clickId);
+                } else {
+                    const separator = finalUrl.includes('?') ? '&' : '?';
+                    finalUrl += `${separator}click_id=${clickId}`;
+                }
+
+                if (subId) finalUrl += `&subid=${encodeURIComponent(subId)}`;
+
+                console.log("Final Redirect URL:", finalUrl);
+
+                // 4. Redirect
+                manualLink.href = finalUrl;
+                setTimeout(() => {
+                    window.location.href = finalUrl;
+
+                    // After 3 seconds, if still here, show fallback
+                    setTimeout(() => {
+                        fallbackEl.classList.remove('hidden');
+                        statusEl.innerText = "Almost there...";
+                    }, 3000);
+                }, 500);
+
+            } catch (error) {
+                console.error("Tracking Error:", error);
+                statusEl.innerText = "Redirection Failed";
+                statusEl.style.color = "#ef4444";
+                subtextEl.innerText = "Error: " + error.message;
+                loaderEl.style.display = "none";
+            }
+        }
+
+        processClick();
+    </script>
+</body>
+
+</html>

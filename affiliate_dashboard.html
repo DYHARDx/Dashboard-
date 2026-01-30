@@ -198,8 +198,8 @@
                 list.innerHTML = featured.map(o => `
                     <div class="flex items-center justify-between p-3" style="background: rgba(255,255,255,0.03); border-radius: 10px; border: 1px solid var(--border-color);">
                         <div>
-                            <div class="font-bold text-sm">${o.name}</div>
-                            <div class="text-xs text-muted">${o.category || 'CPA'} • ${o.type || 'PPD'}</div>
+                            <div class="font-bold text-sm">${o.title}</div>
+                            <div class="text-xs text-muted">${o.category || 'CPA'} • ${o.revenueType || 'CPA'}</div>
                         </div>
                         <div class="text-right">
                             <div class="text-success font-bold">$${(o.payout || 0).toFixed(2)}</div>

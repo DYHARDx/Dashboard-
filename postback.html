@@ -83,8 +83,12 @@
 
         loadSidebar();
 
-        // Copy functionality
+        // Dynamic URL Display
         const codeBlock = document.getElementById('postbackUrlDisplay');
+        const baseUrl = window.location.origin;
+        codeBlock.innerText = `${baseUrl}/api/postback?click_id={CLICK_ID}&payout={PAYOUT}&txn_id={TXN_ID}`;
+
+        // Copy functionality
         codeBlock.style.cursor = 'pointer';
         codeBlock.title = 'Click to Copy';
         codeBlock.addEventListener('click', () => {

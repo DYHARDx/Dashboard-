@@ -153,9 +153,27 @@ export const getOffers = async () => {
         return snapshot.docs.map(doc => ({ id: doc.id, ...doc.data() }));
     } catch (e) {
         console.error("Error fetching offers: ", e);
-        // Fallback or empty array
         return [];
     }
+};
+
+export const getOfferById = async (id) => {
+    const docRef = doc(db, "offers", id);
+    const docSnap = await getDoc(docRef);
+    if (docSnap.exists()) {
+        return { id: docSnap.id, ...docSnap.data() };
+    }
+    return null;
+};
+
+export const updateOffer = async (id, data) => {
+    const docRef = doc(db, "offers", id);
+    await updateDoc(docRef, data);
+};
+
+export const deleteOffer = async (id) => {
+    const docRef = doc(db, "offers", id);
+    await deleteDoc(docRef);
 };
 
 // 2. Stats & Analytics
@@ -327,6 +345,11 @@ export const updateAffiliate = async (id, data) => {
 export const updateAdvertiser = async (id, data) => {
     const docRef = doc(db, "advertisers", id);
     await updateDoc(docRef, data);
+};
+
+export const deleteAdvertiser = async (id) => {
+    const docRef = doc(db, "advertisers", id);
+    await deleteDoc(docRef);
 };
 
 export const deleteAffiliate = async (id) => {
